@@ -57,6 +57,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Downgraded `@tanstack/react-query` from `^5.59.20` → `^4.36.1` in `apps/web` and `apps/mobile` — tRPC v10 (`@trpc/react-query@10.x`, `@trpc/next@10.x`) requires TanStack Query v4, not v5
 - Pinned `react-native-reanimated` to `~3.10.1` in `apps/mobile` — NativeWind 4 transitively resolved to `reanimated@4.3.0` which requires React Native 0.81-0.85; Expo SDK 51 requires reanimated 3.x
 
+### Added — Step 1.2: Per-Package ESLint Configuration (2026-04-11)
+
+- Per-package `.eslintrc.js` in all 5 shared packages (`db`, `api`, `types`, `utils`, `ui`): extends `@finance/eslint-config`, sets `parserOptions.tsconfigRootDir` to `__dirname` for correct per-package TypeScript resolution (files: `packages/db/.eslintrc.js`, `packages/api/.eslintrc.js`, `packages/types/.eslintrc.js`, `packages/utils/.eslintrc.js`, `packages/ui/.eslintrc.js`)
+- `packages/db/package.json`: Added missing `"lint": "eslint src/ --max-warnings 0"` script (all other packages already had it) (file: `packages/db/package.json`)
+
 ### Added — Step 1.1: Turborepo Monorepo Infrastructure (2026-04-11)
 
 - Root `tsconfig.json` — TypeScript project-reference solution anchor; `files:[]`, `include:[]`, references all 7 workspace packages for IDE navigation (VS Code multi-root indexing); no `composite:true` (file: `tsconfig.json`)

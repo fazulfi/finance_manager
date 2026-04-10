@@ -91,6 +91,51 @@ packages/
 - ❌ Return password, tokens, or secrets from any procedure
 - ❌ Query without `userId` filter → IDOR vulnerability
 
+## Orchestrator Workflow
+
+> These are the 8 steps the orchestrator runs in order at the end of every session. Steps 1–4 are execution; steps 5–8 are wrap-up.
+
+| Step | Name | Owner | Description |
+|------|------|-------|-------------|
+| 1 | Receive Request | Orchestrator | Parse user intent; classify as refactor / build / research / etc. |
+| 2 | PLAN PHASE | Planner subagent | Decompose task into execution steps; produce ready-to-delegate plan |
+| 3 | EXECUTION PHASE | Coder / Reviewer / Tester / etc. | Execute plan steps; quality gates enforced after every coder step |
+| 4 | RESULT PHASE | Orchestrator | Collect outputs from all subagents; verify acceptance criteria met |
+| 5 | DOCS PHASE | Docs subagent | Update README, CHANGELOG, AGENTS.md, DECISION_LOG; **commit only — no push** |
+| 6 | SESSION HANDOFF | Docs subagent | Append "Last Session" block to AGENTS.md so next session has full context |
+| 7 | **PUSH GATE** | **Orchestrator** | Push all session commits to GitHub (see rules below) |
+| 8 | Final Response | Orchestrator | Synthesize and deliver final response to user |
+
+### Push Gate Rules (Step 7)
+
+The orchestrator — **not any subagent** — runs the push gate directly after SESSION HANDOFF and before delivering the final response.
+
+**Algorithm:**
+```bash
+# 1. Check for unpushed commits
+git log origin/main..HEAD --oneline
+
+# If output is empty → nothing to push → skip silently (no message to user)
+# If output is non-empty → push:
+git push origin main
+```
+
+**Behavior:**
+- ✅ **Commits exist to push** → run `git push origin main`; on success, include one line in the final response: `"✅ Session commits pushed to GitHub."`
+- ✅ **Nothing to push** → skip entirely; do NOT mention it in the final response
+- ⚠️ **Push fails** (network error, auth error, rejected) → do NOT block the final response; instead, append a warning block to the final response:
+  ```
+  ⚠️ Git push failed — commits are saved locally but NOT on GitHub.
+  Error: [paste exact git error message here]
+  Action required: Run `git push origin main` manually to sync.
+  ```
+
+**Hard constraints:**
+- ❌ Never `git push --force` — always plain `git push origin main`
+- ❌ Never push from any subagent — push is exclusively an orchestrator action
+- ❌ Docs subagent commits only (rule in `.opencode/agents/docs.md` line 129: `Do NOT push — commit only`) — this MUST NOT be changed
+- ❌ Do not skip the push gate even if DOCS PHASE produced no commits (always check; silently skip if clean)
+
 ---
 
 ## Completed Phases
@@ -99,6 +144,7 @@ packages/
 | -------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ---------- |
 | Phase 0  | Prerequisites & Environment Setup — Turborepo scaffold, all workspace packages stubbed, shared tsconfig/eslint configs, VSCode settings | ✅ Complete | 2026-04-11 |
 | Step 1.1 | Turborepo monorepo infrastructure — root `tsconfig.json` (solution anchor), `prettier.config.js` (CommonJS), `.eslintrc.js` (CommonJS)  | ✅ Complete | 2026-04-11 |
+| Step 1.2 | Shared TypeScript and ESLint config verified; per-package `.eslintrc.js` created in all 5 shared packages; `packages/db/package.json` lint script patched | ✅ Complete | 2026-04-11 |
 
 _(Updated by docs agent after each completed phase)_
 
@@ -107,11 +153,11 @@ _(Updated by docs agent after each completed phase)_
 ## Last Session (2026-04-11)
 
 - Done:
-  - Completed Step 1.1: Turborepo monorepo initialization
-  - Created root `tsconfig.json` (TypeScript solution anchor, 7 workspace references, no `composite:true`)
-  - Created root `prettier.config.js` (`printWidth:100`, `endOfLine:lf`, `trailingComma:all`, CommonJS)
-  - Created root `.eslintrc.js` (`root:true`, extends `@finance/eslint-config`, CommonJS)
-  - Validated: `pnpm install` exit 0, turbo 2.9.6, tsc 5.9.3, prettier 3.8.2
-  - All reviewer checks passed, all tester checks passed
-- In progress: Nothing — Step 1.1 fully complete
-- Next: Step 1.2 — Next.js 14 web app setup (`apps/web` bootstrap with App Router, TypeScript, Tailwind CSS, shadcn/ui)
+  - Completed Step 1.2: Shared TypeScript and ESLint configuration verified and completed
+  - packages/tsconfig/ (base.json, nextjs.json, react-native.json) confirmed complete — zero changes needed
+  - packages/eslint-config/ (index.js, package.json) confirmed complete — zero changes needed
+  - Created per-package .eslintrc.js in packages/db, api, types, utils, ui (CommonJS, extends @finance/eslint-config, tsconfigRootDir: __dirname)
+  - Added missing "lint" script to packages/db/package.json
+  - All 9 validation checks passed (9/9)
+- In progress: Nothing — Step 1.2 fully complete
+- Next: Step 1.3 — Next.js 14 web app bootstrap (apps/web: App Router, TypeScript, Tailwind CSS, shadcn/ui setup)
