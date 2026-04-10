@@ -1,0 +1,27 @@
+{
+  "name": "@finance/api",
+  "version": "0.0.1",
+  "private": true,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src/ --max-warnings 0"
+  },
+  "dependencies": {
+    "@trpc/server": "^10.45.2",
+    "@finance/db": "workspace:*",
+    "@finance/types": "workspace:*",
+    "zod": "^3.23.8",
+    "superjson": "^2.2.2"
+  },
+  "devDependencies": {
+    "@finance/tsconfig": "workspace:*",
+    "@finance/eslint-config": "workspace:*",
+    "typescript": "^5.6.3"
+  }
+}

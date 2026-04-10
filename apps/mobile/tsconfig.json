@@ -1,0 +1,14 @@
+{
+  "extends": "@finance/tsconfig/react-native.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@finance/types": ["../../packages/types/src/index.ts"],
+      "@finance/utils": ["../../packages/utils/src/index.ts"],
+      "@finance/api": ["../../packages/api/src/index.ts"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules"]
+}

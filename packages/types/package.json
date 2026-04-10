@@ -1,0 +1,23 @@
+{
+  "name": "@finance/types",
+  "version": "0.0.1",
+  "private": true,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src/ --max-warnings 0"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@finance/tsconfig": "workspace:*",
+    "@finance/eslint-config": "workspace:*",
+    "typescript": "^5.6.3"
+  }
+}
