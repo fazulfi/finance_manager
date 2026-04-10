@@ -40,6 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.gitignore`: Comprehensive patterns for Node.js, Next.js, Expo, TypeScript, and React Native
 - `README.md`: Project overview with stack, workspace structure, and getting-started guide
 
+### Security — .gitignore Hardening (2026-04-11)
+
+- Hardened root `.gitignore`: added `.env.development` and `.env.test` patterns to prevent accidental commit of non-local env files; added `*.pem` to block SSL/TLS certificate files; added `logs/` to block log directories; consolidated individual `.opencode/*` file entries into a single `.opencode/` directory exclusion to keep AI agent workspace files private/local (file: `.gitignore`)
+
 ### Fixed — Phase 0 Post-Install Peer Dependency Corrections (2026-04-11)
 
 - Downgraded `@tanstack/react-query` from `^5.59.20` → `^4.36.1` in `apps/web` and `apps/mobile` — tRPC v10 (`@trpc/react-query@10.x`, `@trpc/next@10.x`) requires TanStack Query v4, not v5
