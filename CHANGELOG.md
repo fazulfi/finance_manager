@@ -40,6 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.gitignore`: Comprehensive patterns for Node.js, Next.js, Expo, TypeScript, and React Native
 - `README.md`: Project overview with stack, workspace structure, and getting-started guide
 
+### Changed — Orchestrator Push Gate (2026-04-11)
+
+- [Workflow] Added Push Gate as Step 7 of 8 in the Orchestrator Workflow — orchestrator now runs `git push origin main` at the end of every session, after SESSION HANDOFF (Step 6) and before final response to user (Step 8); docs agent remains commit-only with no change to that constraint; closes the gap where session commits accumulated locally without reaching GitHub (file: `.opencode/AGENTS.md` lines 94–138)
+
 ### Security — .gitignore Hardening (2026-04-11)
 
 - Hardened root `.gitignore`: added `.env.development` and `.env.test` patterns to prevent accidental commit of non-local env files; added `*.pem` to block SSL/TLS certificate files; added `logs/` to block log directories; consolidated individual `.opencode/*` file entries into a single `.opencode/` directory exclusion to keep AI agent workspace files private/local (file: `.gitignore`)
