@@ -48,6 +48,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Hardened root `.gitignore`: added `.env.development` and `.env.test` patterns to prevent accidental commit of non-local env files; added `*.pem` to block SSL/TLS certificate files; added `logs/` to block log directories; consolidated individual `.opencode/*` file entries into a single `.opencode/` directory exclusion to keep AI agent workspace files private/local (file: `.gitignore`)
 
+### Fixed — Orchestrator Push Gate Never Executed (2026-04-11)
+
+- [Workflow] Push Gate now correctly implemented in `orchestrator.md` `<operating_workflow>` Step 7 — previously documented in `AGENTS.md` only but never executed because `orchestrator.md` (the actual instruction file) lacked the logic; orchestrator now runs `git log origin/main..HEAD --oneline` to detect unpushed commits, then pushes via `git push origin main`, skips silently if branch is clean, and warns on failure; quality gates list in `orchestrator.md` also updated with Push Gate entry (file: `.opencode/agents/orchestrator.md` lines 408–426, 439)
+
 ### Fixed — Phase 0 Post-Install Peer Dependency Corrections (2026-04-11)
 
 - Downgraded `@tanstack/react-query` from `^5.59.20` → `^4.36.1` in `apps/web` and `apps/mobile` — tRPC v10 (`@trpc/react-query@10.x`, `@trpc/next@10.x`) requires TanStack Query v4, not v5
