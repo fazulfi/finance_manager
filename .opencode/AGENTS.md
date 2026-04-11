@@ -51,6 +51,18 @@ packages/
 - `@finance/api` root export must stay server-safe; client React helpers belong only in `@finance/api/react`
 - `packages/api/src/trpc.ts` owns package-local session/context types and accepts injected `db` + `session`
 
+### Input Validation Conventions (established 2026-04-12)
+
+- All MongoDB ID inputs MUST use the shared `objectId` Zod schema from `packages/api/src/trpc.ts` (regex: `/^[0-9a-fA-F]{24}$/`) — never bare `z.string()` for IDs
+- All string inputs MUST have `.max()` constraints to prevent payload abuse
+- All array inputs MUST have `.max()` constraints (e.g., budget items `.max(50)`)
+- Cross-reference fields (e.g., `transferTo`) MUST be validated for ownership — verify the referenced record belongs to `ctx.session.user.id` before mutation
+
+### Prisma Mutation Safety (established 2026-04-12)
+
+- All `update` and `delete` WHERE clauses MUST include `userId` (belt-and-suspenders with `findFirst` ownership check) — never pass bare `{ id }` to mutations
+- Rationale: `findFirst` + bare `{ id }` update is vulnerable to TOCTOU race conditions; including `userId` in the WHERE clause makes the mutation itself ownership-scoped
+
 ### Next.js App Router Conventions
 
 - Default to Server Components — only add `"use client"` when needed (events, hooks, browser APIs)
@@ -96,6 +108,9 @@ packages/
 - ❌ N+1 queries — use `include`/`select` in Prisma
 - ❌ Return password, tokens, or secrets from any procedure
 - ❌ Query without `userId` filter → IDOR vulnerability
+- ❌ Prisma `update`/`delete` with bare `{ id }` in WHERE — always include `userId` alongside `id`
+- ❌ Bare `z.string()` for MongoDB ObjectId inputs — always use `objectId` from `trpc.ts`
+- ❌ Unbounded string/array inputs — always add `.max()` constraints
 
 ## Orchestrator Workflow
 
@@ -170,6 +185,7 @@ git push origin main
 | Phase 2.1 | Prisma + MongoDB Schema — `packages/db/prisma/schema.prisma` (10 models, 10 enums, BudgetItem embedded type, 21 indexes), `src/index.ts` (globalThis singleton), `src/seed.ts` (19 default categories); `@types/node` added; turbo.json updated | ✅ Complete | 2026-04-11 |
 | Phase 2.2 | tRPC package setup — `packages/api/package.json` exports updated; `src/trpc.ts` genericized for injected session/db context; `src/root.ts`, `src/index.ts`, `src/react.tsx` added; `debt` router added; `category.getById` and `stock.updatePrice` added; type-check EXIT CODE 0 ✅ | ✅ Complete | 2026-04-11 |
 | Phase 2.2 | tRPC API package verification — All 10 routers verified working; Zod validation and error handling in place; Prisma queries validated; `cd packages/api && pnpm install` PASS; `cd packages/api && pnpm type-check` PASS ✅ | ✅ Complete | 2026-04-12 |
+| Phase 2.2 | tRPC security hardening — fixed 21 IDOR WHERE clauses across 9 routers, added ObjectId format validation, string/array max constraints, transferTo ownership validation, react.tsx client fix, budget spent preservation; type-check PASS ✅ | ✅ Complete | 2026-04-12 |
 
 _(Updated by docs agent after each completed phase)_
 
@@ -177,14 +193,7 @@ _(Updated by docs agent after each completed phase)_
 
 ## Last Session (2026-04-12)
 
-- Done:
-  - Completed Step 2.2: tRPC API package verification in `packages/api/`
-  - Verified all 10 routers are implemented: auth, account, transaction, category, project, budget, stock, investment, goal, debt
-  - Confirmed Zod validation on all procedures
-  - Confirmed proper error handling with `TRPCError`
-  - Confirmed Prisma queries are properly typed and owner-checked
-  - Validation: `cd packages/api && pnpm install` PASS; `cd packages/api && pnpm type-check` PASS
-- In progress:
-  - Nothing — Phase 2.2 fully complete
-- Next:
-  - Phase 2.3 — wire NextAuth in `apps/web/` to inject session into `createTRPCContext` and consume `@finance/api` / `@finance/api/react` from the correct server/client boundaries
+- Done: Step 2.2 tRPC API verification + security hardening — fixed 21 IDOR WHERE clauses, react.tsx client type, transferTo validation, ObjectId format validation, string max-lengths, budget spent preservation
+- In progress: None
+- Deferred: Add `select` clauses to all Prisma queries (tracked as tech debt); refactor budget category matching from name-based to categoryId-based
+- Next: Step 2.3 or next phase per BLUEPRINT.md

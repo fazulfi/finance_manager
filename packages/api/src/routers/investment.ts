@@ -1,7 +1,7 @@
 // packages/api/src/routers/investment.ts
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { router, protectedProcedure } from "../trpc.js";
+import { router, protectedProcedure, objectId } from "../trpc.js";
 
 const InvestmentTypeEnum = z.enum([
   "STOCK",
@@ -44,7 +44,7 @@ export const investmentRouter = router({
       return { items, total, page, limit };
     }),
 
-  getById: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+  getById: protectedProcedure.input(z.object({ id: objectId })).query(async ({ ctx, input }) => {
     const investment = await ctx.db.investment.findFirst({
       where: { id: input.id, userId: ctx.session.user.id },
     });
@@ -62,7 +62,7 @@ export const investmentRouter = router({
         amount: z.number().positive(),
         currentValue: z.number().min(0),
         cost: z.number().min(0),
-        notes: z.string().optional(),
+        notes: z.string().max(1000).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -85,13 +85,13 @@ export const investmentRouter = router({
   update: protectedProcedure
     .input(
       z.object({
-        id: z.string(),
+        id: objectId,
         name: z.string().min(1).max(200).optional(),
         type: InvestmentTypeEnum.optional(),
         amount: z.number().positive().optional(),
         currentValue: z.number().min(0).optional(),
         cost: z.number().min(0).optional(),
-        notes: z.string().optional(),
+        notes: z.string().max(1000).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -117,21 +117,22 @@ export const investmentRouter = router({
       if (input.cost !== undefined) data.cost = input.cost;
       if (input.notes !== undefined) data.notes = input.notes;
 
-      return ctx.db.investment.update({ where: { id: input.id }, data });
+      return ctx.db.investment.update({
+        where: { id: input.id, userId: ctx.session.user.id },
+        data,
+      });
     }),
 
-  delete: protectedProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.db.investment.findFirst({
-        where: { id: input.id, userId: ctx.session.user.id },
-      });
-      if (!existing) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Investment not found" });
-      }
-      await ctx.db.investment.delete({ where: { id: input.id } });
-      return { success: true };
-    }),
+  delete: protectedProcedure.input(z.object({ id: objectId })).mutation(async ({ ctx, input }) => {
+    const existing = await ctx.db.investment.findFirst({
+      where: { id: input.id, userId: ctx.session.user.id },
+    });
+    if (!existing) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Investment not found" });
+    }
+    await ctx.db.investment.delete({ where: { id: input.id, userId: ctx.session.user.id } });
+    return { success: true };
+  }),
 
   getSummary: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.session.user.id;

@@ -1,7 +1,7 @@
 // packages/api/src/routers/account.ts
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { router, protectedProcedure } from "../trpc.js";
+import { router, protectedProcedure, objectId } from "../trpc.js";
 
 const AccountTypeEnum = z.enum(["CHECKING", "SAVINGS", "CREDIT", "INVESTMENT", "CASH", "OTHER"]);
 
@@ -31,7 +31,7 @@ export const accountRouter = router({
       return { items, total, page, limit };
     }),
 
-  getById: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+  getById: protectedProcedure.input(z.object({ id: objectId })).query(async ({ ctx, input }) => {
     const account = await ctx.db.account.findFirst({
       where: { id: input.id, userId: ctx.session.user.id },
     });
@@ -66,7 +66,7 @@ export const accountRouter = router({
   update: protectedProcedure
     .input(
       z.object({
-        id: z.string(),
+        id: objectId,
         name: z.string().min(1).max(100).optional(),
         type: AccountTypeEnum.optional(),
         currency: z.string().min(1).max(10).optional(),
@@ -93,24 +93,22 @@ export const accountRouter = router({
       if (input.isActive !== undefined) data.isActive = input.isActive;
 
       return ctx.db.account.update({
-        where: { id: input.id },
+        where: { id: input.id, userId: ctx.session.user.id },
         data,
       });
     }),
 
-  delete: protectedProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.db.account.findFirst({
-        where: { id: input.id, userId: ctx.session.user.id },
-      });
-      if (!existing) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Account not found" });
-      }
-      // Soft delete — mark as inactive rather than hard delete
-      return ctx.db.account.update({
-        where: { id: input.id },
-        data: { isActive: false },
-      });
-    }),
+  delete: protectedProcedure.input(z.object({ id: objectId })).mutation(async ({ ctx, input }) => {
+    const existing = await ctx.db.account.findFirst({
+      where: { id: input.id, userId: ctx.session.user.id },
+    });
+    if (!existing) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Account not found" });
+    }
+    // Soft delete — mark as inactive rather than hard delete
+    return ctx.db.account.update({
+      where: { id: input.id, userId: ctx.session.user.id },
+      data: { isActive: false },
+    });
+  }),
 });

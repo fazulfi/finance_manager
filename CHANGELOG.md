@@ -23,6 +23,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - [API] Keep the root package entrypoint free of client-only React exports so server consumers do not pull in `react.tsx` accidentally (file: `packages/api/src/index.ts`)
 
+### Security — Step 2.2 tRPC Security Hardening (2026-04-12)
+
+- [Security] Fix 21 IDOR vulnerabilities: added `userId` to all Prisma `update`/`delete` WHERE clauses across 9 routers — previously only checked ownership via `findFirst` but passed bare `id` to mutation, allowing authenticated users to mutate other users' records (files: `packages/api/src/routers/account.ts`, `transaction.ts`, `category.ts`, `project.ts`, `budget.ts`, `stock.ts`, `investment.ts`, `goal.ts`, `debt.ts`)
+- [Security] Add `transferTo` ownership validation in transaction create/update — verify target account belongs to current user before allowing transfer (file: `packages/api/src/routers/transaction.ts`)
+- [Security] Add `objectId` Zod schema (`/^[0-9a-fA-F]{24}$/`) in `trpc.ts` for MongoDB ObjectId format validation — all ID inputs now use this shared schema instead of bare `z.string()` (file: `packages/api/src/trpc.ts`)
+- [Security] Add `.max()` constraints to all unbounded string inputs and `.max(50)` to budget items array to prevent payload abuse (files: all 9 router files in `packages/api/src/routers/`)
+- [API] Fix `react.tsx`: replace `createTRPCClient` with `api.createClient()` to fix client type mismatch (file: `packages/api/src/react.tsx`)
+- [API] Fix budget update to preserve existing `spent` values when updating budget items (file: `packages/api/src/routers/budget.ts`)
+
 ### Added — Phase 2.1: Prisma + MongoDB Schema (2026-04-11)
 
 - `packages/db/prisma/schema.prisma`: Full MongoDB schema with 10 models, 10 enums, BudgetItem embedded type

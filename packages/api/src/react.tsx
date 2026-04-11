@@ -1,7 +1,7 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createTRPCClient, httpBatchLink, type HTTPBatchLinkOptions } from "@trpc/client";
+import { httpBatchLink, type HTTPBatchLinkOptions } from "@trpc/client";
 import { createTRPCReact } from "@trpc/react-query";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -17,10 +17,10 @@ export interface ApiClientOptions {
   headers?: HTTPBatchLinkOptions["headers"];
 }
 
-export const apiClient = ({ url, headers }: ApiClientOptions) => {
+export const createApiClient = ({ url, headers }: ApiClientOptions) => {
   const linkOptions: HTTPBatchLinkOptions = headers === undefined ? { url } : { url, headers };
 
-  return createTRPCClient<AppRouter>({
+  return api.createClient({
     transformer: superjson,
     links: [httpBatchLink(linkOptions)],
   });
@@ -29,7 +29,7 @@ export const apiClient = ({ url, headers }: ApiClientOptions) => {
 export interface ApiProviderProps extends ApiClientOptions {
   children: ReactNode;
   queryClient?: QueryClient;
-  trpcClient?: ReturnType<typeof apiClient>;
+  trpcClient?: ReturnType<typeof createApiClient>;
 }
 
 export function ApiProvider({
@@ -40,7 +40,7 @@ export function ApiProvider({
   url,
 }: ApiProviderProps): React.JSX.Element {
   const [queryClient] = useState(() => initialQueryClient ?? new QueryClient());
-  const [trpcClient] = useState(() => initialTrpcClient ?? apiClient({ url, headers }));
+  const [trpcClient] = useState(() => initialTrpcClient ?? createApiClient({ url, headers }));
 
   return (
     <api.Provider client={trpcClient} queryClient={queryClient}>

@@ -1,7 +1,7 @@
 // packages/api/src/routers/category.ts
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { router, protectedProcedure } from "../trpc.js";
+import { router, protectedProcedure, objectId } from "../trpc.js";
 
 const CategoryTypeEnum = z.enum(["INCOME", "EXPENSE"]);
 
@@ -37,7 +37,7 @@ export const categoryRouter = router({
       return { items, total, page, limit };
     }),
 
-  getById: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+  getById: protectedProcedure.input(z.object({ id: objectId })).query(async ({ ctx, input }) => {
     const category = await ctx.db.category.findFirst({
       where: { id: input.id, userId: ctx.session.user.id },
     });
@@ -52,9 +52,9 @@ export const categoryRouter = router({
       z.object({
         name: z.string().min(1).max(100),
         type: CategoryTypeEnum,
-        parent: z.string().optional(),
-        icon: z.string().optional(),
-        color: z.string().optional(),
+        parent: z.string().max(100).optional(),
+        icon: z.string().max(50).optional(),
+        color: z.string().max(20).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -74,10 +74,10 @@ export const categoryRouter = router({
   update: protectedProcedure
     .input(
       z.object({
-        id: z.string(),
+        id: objectId,
         name: z.string().min(1).max(100).optional(),
-        icon: z.string().optional(),
-        color: z.string().optional(),
+        icon: z.string().max(50).optional(),
+        color: z.string().max(20).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -97,30 +97,28 @@ export const categoryRouter = router({
       if (input.color !== undefined) data.color = input.color;
 
       return ctx.db.category.update({
-        where: { id: input.id },
+        where: { id: input.id, userId: ctx.session.user.id },
         data,
       });
     }),
 
-  delete: protectedProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.db.category.findFirst({
-        where: { id: input.id, userId: ctx.session.user.id },
+  delete: protectedProcedure.input(z.object({ id: objectId })).mutation(async ({ ctx, input }) => {
+    const existing = await ctx.db.category.findFirst({
+      where: { id: input.id, userId: ctx.session.user.id },
+    });
+    if (!existing) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Category not found",
       });
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Category not found",
-        });
-      }
-      if (existing.isDefault) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Cannot delete default categories",
-        });
-      }
-      await ctx.db.category.delete({ where: { id: input.id } });
-      return { success: true };
-    }),
+    }
+    if (existing.isDefault) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Cannot delete default categories",
+      });
+    }
+    await ctx.db.category.delete({ where: { id: input.id, userId: ctx.session.user.id } });
+    return { success: true };
+  }),
 });

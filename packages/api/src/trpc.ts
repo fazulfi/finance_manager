@@ -2,7 +2,12 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { db as defaultDb } from "@finance/db";
 import superjson from "superjson";
-import { ZodError } from "zod";
+import { z, ZodError } from "zod";
+
+// ─── Shared Zod Schemas ──────────────────────────────────────────────────────
+
+/** MongoDB ObjectId format validator — use for all ID input fields */
+export const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid ID format");
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 

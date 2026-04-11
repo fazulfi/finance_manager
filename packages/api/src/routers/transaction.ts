@@ -1,7 +1,7 @@
 // packages/api/src/routers/transaction.ts
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { router, protectedProcedure } from "../trpc.js";
+import { router, protectedProcedure, objectId } from "../trpc.js";
 
 const TransactionTypeEnum = z.enum(["INCOME", "EXPENSE", "TRANSFER"]);
 
@@ -11,12 +11,12 @@ export const transactionRouter = router({
       z.object({
         page: z.number().int().min(1).default(1),
         limit: z.number().int().min(1).max(100).default(20),
-        accountId: z.string().optional(),
+        accountId: objectId.optional(),
         type: TransactionTypeEnum.optional(),
-        category: z.string().optional(),
+        category: z.string().max(500).optional(),
         dateFrom: z.date().optional(),
         dateTo: z.date().optional(),
-        search: z.string().optional(),
+        search: z.string().max(500).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -66,7 +66,7 @@ export const transactionRouter = router({
       return { items, total, page, limit };
     }),
 
-  getById: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+  getById: protectedProcedure.input(z.object({ id: objectId })).query(async ({ ctx, input }) => {
     const transaction = await ctx.db.transaction.findFirst({
       where: { id: input.id, userId: ctx.session.user.id },
     });
@@ -82,19 +82,19 @@ export const transactionRouter = router({
   create: protectedProcedure
     .input(
       z.object({
-        accountId: z.string(),
+        accountId: objectId,
         date: z.date(),
         amount: z.number().positive(),
         currency: z.string().min(1).max(10).default("IDR"),
         type: TransactionTypeEnum,
-        category: z.string().min(1),
-        subcategory: z.string().optional(),
-        project: z.string().optional(),
-        tags: z.array(z.string()).default([]),
-        description: z.string().optional(),
-        transferTo: z.string().optional(),
+        category: z.string().min(1).max(500),
+        subcategory: z.string().max(500).optional(),
+        project: z.string().max(500).optional(),
+        tags: z.array(z.string().max(100)).default([]),
+        description: z.string().max(500).optional(),
+        transferTo: objectId.optional(),
         isRecurring: z.boolean().default(false),
-        recurringRule: z.string().optional(),
+        recurringRule: z.string().max(500).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -107,6 +107,19 @@ export const transactionRouter = router({
           code: "BAD_REQUEST",
           message: "Account not found or access denied",
         });
+      }
+
+      // Verify transferTo account ownership for TRANSFER transactions
+      if (input.type === "TRANSFER" && input.transferTo !== undefined) {
+        const transferAccount = await ctx.db.account.findFirst({
+          where: { id: input.transferTo, userId: ctx.session.user.id },
+        });
+        if (!transferAccount) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Transfer destination account not found or access denied",
+          });
+        }
       }
 
       const data: Parameters<typeof ctx.db.transaction.create>[0]["data"] = {
@@ -132,19 +145,19 @@ export const transactionRouter = router({
   update: protectedProcedure
     .input(
       z.object({
-        id: z.string(),
+        id: objectId,
         date: z.date().optional(),
         amount: z.number().positive().optional(),
         currency: z.string().min(1).max(10).optional(),
         type: TransactionTypeEnum.optional(),
-        category: z.string().min(1).optional(),
-        subcategory: z.string().optional(),
-        project: z.string().optional(),
-        tags: z.array(z.string()).optional(),
-        description: z.string().optional(),
-        transferTo: z.string().optional(),
+        category: z.string().min(1).max(500).optional(),
+        subcategory: z.string().max(500).optional(),
+        project: z.string().max(500).optional(),
+        tags: z.array(z.string().max(100)).optional(),
+        description: z.string().max(500).optional(),
+        transferTo: objectId.optional(),
         isRecurring: z.boolean().optional(),
-        recurringRule: z.string().optional(),
+        recurringRule: z.string().max(500).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -156,6 +169,20 @@ export const transactionRouter = router({
           code: "NOT_FOUND",
           message: "Transaction not found",
         });
+      }
+
+      // Verify transferTo account ownership for TRANSFER transactions
+      const effectiveType = input.type ?? existing.type;
+      if (effectiveType === "TRANSFER" && input.transferTo !== undefined) {
+        const transferAccount = await ctx.db.account.findFirst({
+          where: { id: input.transferTo, userId: ctx.session.user.id },
+        });
+        if (!transferAccount) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Transfer destination account not found or access denied",
+          });
+        }
       }
 
       const data: Parameters<typeof ctx.db.transaction.update>[0]["data"] = {};
@@ -173,33 +200,31 @@ export const transactionRouter = router({
       if (input.recurringRule !== undefined) data.recurringRule = input.recurringRule;
 
       return ctx.db.transaction.update({
-        where: { id: input.id },
+        where: { id: input.id, userId: ctx.session.user.id },
         data,
       });
     }),
 
-  delete: protectedProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.db.transaction.findFirst({
-        where: { id: input.id, userId: ctx.session.user.id },
+  delete: protectedProcedure.input(z.object({ id: objectId })).mutation(async ({ ctx, input }) => {
+    const existing = await ctx.db.transaction.findFirst({
+      where: { id: input.id, userId: ctx.session.user.id },
+    });
+    if (!existing) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Transaction not found",
       });
-      if (!existing) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Transaction not found",
-        });
-      }
-      await ctx.db.transaction.delete({ where: { id: input.id } });
-      return { success: true };
-    }),
+    }
+    await ctx.db.transaction.delete({ where: { id: input.id, userId: ctx.session.user.id } });
+    return { success: true };
+  }),
 
   getStats: protectedProcedure
     .input(
       z.object({
         dateFrom: z.date(),
         dateTo: z.date(),
-        accountId: z.string().optional(),
+        accountId: objectId.optional(),
       }),
     )
     .query(async ({ ctx, input }) => {

@@ -1,7 +1,7 @@
 // packages/api/src/routers/goal.ts
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { router, protectedProcedure } from "../trpc.js";
+import { router, protectedProcedure, objectId } from "../trpc.js";
 
 const GoalStatusEnum = z.enum(["ACTIVE", "COMPLETED", "PAUSED"]);
 
@@ -37,7 +37,7 @@ export const goalRouter = router({
       return { items, total, page, limit };
     }),
 
-  getById: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+  getById: protectedProcedure.input(z.object({ id: objectId })).query(async ({ ctx, input }) => {
     const goal = await ctx.db.savingsGoal.findFirst({
       where: { id: input.id, userId: ctx.session.user.id },
     });
@@ -54,7 +54,7 @@ export const goalRouter = router({
         targetAmount: z.number().positive(),
         currentAmount: z.number().min(0).default(0),
         deadline: z.date().optional(),
-        accountId: z.string().optional(),
+        accountId: objectId.optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -87,11 +87,11 @@ export const goalRouter = router({
   update: protectedProcedure
     .input(
       z.object({
-        id: z.string(),
+        id: objectId,
         name: z.string().min(1).max(200).optional(),
         targetAmount: z.number().positive().optional(),
         deadline: z.date().optional(),
-        accountId: z.string().optional(),
+        accountId: objectId.optional(),
         status: GoalStatusEnum.optional(),
       }),
     )
@@ -123,26 +123,27 @@ export const goalRouter = router({
       if (input.accountId !== undefined) data.accountId = input.accountId;
       if (input.status !== undefined) data.status = input.status;
 
-      return ctx.db.savingsGoal.update({ where: { id: input.id }, data });
+      return ctx.db.savingsGoal.update({
+        where: { id: input.id, userId: ctx.session.user.id },
+        data,
+      });
     }),
 
-  delete: protectedProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.db.savingsGoal.findFirst({
-        where: { id: input.id, userId: ctx.session.user.id },
-      });
-      if (!existing) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Savings goal not found" });
-      }
-      await ctx.db.savingsGoal.delete({ where: { id: input.id } });
-      return { success: true };
-    }),
+  delete: protectedProcedure.input(z.object({ id: objectId })).mutation(async ({ ctx, input }) => {
+    const existing = await ctx.db.savingsGoal.findFirst({
+      where: { id: input.id, userId: ctx.session.user.id },
+    });
+    if (!existing) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Savings goal not found" });
+    }
+    await ctx.db.savingsGoal.delete({ where: { id: input.id, userId: ctx.session.user.id } });
+    return { success: true };
+  }),
 
   updateProgress: protectedProcedure
     .input(
       z.object({
-        id: z.string(),
+        id: objectId,
         currentAmount: z.number().min(0),
       }),
     )
@@ -159,7 +160,7 @@ export const goalRouter = router({
         input.currentAmount >= existing.targetAmount ? "COMPLETED" : existing.status;
 
       return ctx.db.savingsGoal.update({
-        where: { id: input.id },
+        where: { id: input.id, userId: ctx.session.user.id },
         data: {
           currentAmount: input.currentAmount,
           status: newStatus,
@@ -168,7 +169,7 @@ export const goalRouter = router({
     }),
 
   getProgress: protectedProcedure
-    .input(z.object({ id: z.string() }))
+    .input(z.object({ id: objectId }))
     .query(async ({ ctx, input }) => {
       const goal = await ctx.db.savingsGoal.findFirst({
         where: { id: input.id, userId: ctx.session.user.id },

@@ -1,7 +1,7 @@
 // packages/api/src/routers/stock.ts
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { router, protectedProcedure } from "../trpc.js";
+import { router, protectedProcedure, objectId } from "../trpc.js";
 
 const ExchangeEnum = z.enum(["NYSE", "NASDAQ", "LSE", "OTHER"]);
 
@@ -31,7 +31,7 @@ export const stockRouter = router({
       return { items, total, page, limit };
     }),
 
-  getById: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+  getById: protectedProcedure.input(z.object({ id: objectId })).query(async ({ ctx, input }) => {
     const stock = await ctx.db.stock.findFirst({
       where: { id: input.id, userId: ctx.session.user.id },
     });
@@ -45,7 +45,7 @@ export const stockRouter = router({
     .input(
       z.object({
         ticker: z.string().min(1).max(20).toUpperCase(),
-        name: z.string().min(1),
+        name: z.string().min(1).max(200),
         exchange: ExchangeEnum.default("OTHER"),
         quantity: z.number().positive(),
         avgBuyPrice: z.number().positive(),
@@ -74,7 +74,7 @@ export const stockRouter = router({
   update: protectedProcedure
     .input(
       z.object({
-        id: z.string(),
+        id: objectId,
         currentPrice: z.number().positive().optional(),
         quantity: z.number().positive().optional(),
         avgBuyPrice: z.number().positive().optional(),
@@ -98,7 +98,7 @@ export const stockRouter = router({
       const gainPercent = totalCost > 0 ? (gain / totalCost) * 100 : 0;
 
       return ctx.db.stock.update({
-        where: { id: input.id },
+        where: { id: input.id, userId: ctx.session.user.id },
         data: {
           quantity: newQuantity,
           avgBuyPrice: newAvgBuyPrice,
@@ -115,7 +115,7 @@ export const stockRouter = router({
   updatePrice: protectedProcedure
     .input(
       z.object({
-        id: z.string(),
+        id: objectId,
         currentPrice: z.number().positive(),
       }),
     )
@@ -133,7 +133,7 @@ export const stockRouter = router({
       const gainPercent = totalCost > 0 ? (gain / totalCost) * 100 : 0;
 
       return ctx.db.stock.update({
-        where: { id: input.id },
+        where: { id: input.id, userId: ctx.session.user.id },
         data: {
           currentPrice: input.currentPrice,
           currentValue,
@@ -144,16 +144,14 @@ export const stockRouter = router({
       });
     }),
 
-  delete: protectedProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.db.stock.findFirst({
-        where: { id: input.id, userId: ctx.session.user.id },
-      });
-      if (!existing) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Stock not found" });
-      }
-      await ctx.db.stock.delete({ where: { id: input.id } });
-      return { success: true };
-    }),
+  delete: protectedProcedure.input(z.object({ id: objectId })).mutation(async ({ ctx, input }) => {
+    const existing = await ctx.db.stock.findFirst({
+      where: { id: input.id, userId: ctx.session.user.id },
+    });
+    if (!existing) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Stock not found" });
+    }
+    await ctx.db.stock.delete({ where: { id: input.id, userId: ctx.session.user.id } });
+    return { success: true };
+  }),
 });

@@ -1,7 +1,7 @@
 // packages/api/src/routers/debt.ts
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { router, protectedProcedure } from "../trpc.js";
+import { router, protectedProcedure, objectId } from "../trpc.js";
 
 const DebtTypeEnum = z.enum([
   "CREDIT_CARD",
@@ -44,7 +44,7 @@ export const debtRouter = router({
       return { items, total, page, limit };
     }),
 
-  getById: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+  getById: protectedProcedure.input(z.object({ id: objectId })).query(async ({ ctx, input }) => {
     const debt = await ctx.db.debt.findFirst({
       where: { id: input.id, userId: ctx.session.user.id },
     });
@@ -84,7 +84,7 @@ export const debtRouter = router({
   update: protectedProcedure
     .input(
       z.object({
-        id: z.string(),
+        id: objectId,
         name: z.string().min(1).max(200).optional(),
         type: DebtTypeEnum.optional(),
         totalAmount: z.number().positive().optional(),
@@ -111,21 +111,22 @@ export const debtRouter = router({
       if (input.minPayment !== undefined) data.minPayment = input.minPayment;
       if (input.dueDate !== undefined) data.dueDate = input.dueDate;
 
-      return ctx.db.debt.update({ where: { id: input.id }, data });
+      return ctx.db.debt.update({
+        where: { id: input.id, userId: ctx.session.user.id },
+        data,
+      });
     }),
 
-  delete: protectedProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.db.debt.findFirst({
-        where: { id: input.id, userId: ctx.session.user.id },
-      });
-      if (!existing) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Debt not found" });
-      }
-      await ctx.db.debt.delete({ where: { id: input.id } });
-      return { success: true };
-    }),
+  delete: protectedProcedure.input(z.object({ id: objectId })).mutation(async ({ ctx, input }) => {
+    const existing = await ctx.db.debt.findFirst({
+      where: { id: input.id, userId: ctx.session.user.id },
+    });
+    if (!existing) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Debt not found" });
+    }
+    await ctx.db.debt.delete({ where: { id: input.id, userId: ctx.session.user.id } });
+    return { success: true };
+  }),
 
   getSummary: protectedProcedure.query(async ({ ctx }) => {
     const debts = await ctx.db.debt.findMany({

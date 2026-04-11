@@ -1,14 +1,14 @@
 // packages/api/src/routers/budget.ts
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { router, protectedProcedure } from "../trpc.js";
+import { router, protectedProcedure, objectId } from "../trpc.js";
 
 const BudgetTypeEnum = z.enum(["MONTHLY", "ANNUAL", "CUSTOM"]);
 const BudgetPeriodEnum = z.enum(["WEEKLY", "MONTHLY", "QUARTERLY", "YEARLY"]);
 
 const BudgetItemSchema = z.object({
-  categoryId: z.string(),
-  name: z.string().min(1),
+  categoryId: objectId,
+  name: z.string().min(1).max(200),
   budgeted: z.number().positive(),
 });
 
@@ -38,7 +38,7 @@ export const budgetRouter = router({
       return { items, total, page, limit };
     }),
 
-  getById: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+  getById: protectedProcedure.input(z.object({ id: objectId })).query(async ({ ctx, input }) => {
     const budget = await ctx.db.budget.findFirst({
       where: { id: input.id, userId: ctx.session.user.id },
     });
@@ -56,7 +56,7 @@ export const budgetRouter = router({
         period: BudgetPeriodEnum,
         startDate: z.date(),
         endDate: z.date().optional(),
-        items: z.array(BudgetItemSchema).default([]),
+        items: z.array(BudgetItemSchema).max(50).default([]),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -81,13 +81,13 @@ export const budgetRouter = router({
   update: protectedProcedure
     .input(
       z.object({
-        id: z.string(),
+        id: objectId,
         name: z.string().min(1).max(100).optional(),
         type: BudgetTypeEnum.optional(),
         period: BudgetPeriodEnum.optional(),
         startDate: z.date().optional(),
         endDate: z.date().optional(),
-        items: z.array(BudgetItemSchema).optional(),
+        items: z.array(BudgetItemSchema).max(50).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -105,32 +105,37 @@ export const budgetRouter = router({
       if (input.startDate !== undefined) data.startDate = input.startDate;
       if (input.endDate !== undefined) data.endDate = input.endDate;
       if (input.items !== undefined) {
+        // Preserve existing spent values for items that match by categoryId
+        const existingSpentMap = new Map(
+          existing.items.map((item) => [item.categoryId, item.spent]),
+        );
         data.items = input.items.map((item) => ({
           categoryId: item.categoryId,
           name: item.name,
           budgeted: item.budgeted,
-          spent: 0,
+          spent: existingSpentMap.get(item.categoryId) ?? 0,
         }));
       }
 
-      return ctx.db.budget.update({ where: { id: input.id }, data });
+      return ctx.db.budget.update({
+        where: { id: input.id, userId: ctx.session.user.id },
+        data,
+      });
     }),
 
-  delete: protectedProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.db.budget.findFirst({
-        where: { id: input.id, userId: ctx.session.user.id },
-      });
-      if (!existing) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Budget not found" });
-      }
-      await ctx.db.budget.delete({ where: { id: input.id } });
-      return { success: true };
-    }),
+  delete: protectedProcedure.input(z.object({ id: objectId })).mutation(async ({ ctx, input }) => {
+    const existing = await ctx.db.budget.findFirst({
+      where: { id: input.id, userId: ctx.session.user.id },
+    });
+    if (!existing) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Budget not found" });
+    }
+    await ctx.db.budget.delete({ where: { id: input.id, userId: ctx.session.user.id } });
+    return { success: true };
+  }),
 
   getProgress: protectedProcedure
-    .input(z.object({ id: z.string() }))
+    .input(z.object({ id: objectId }))
     .query(async ({ ctx, input }) => {
       const budget = await ctx.db.budget.findFirst({
         where: { id: input.id, userId: ctx.session.user.id },
@@ -160,7 +165,9 @@ export const budgetRouter = router({
         spentMap[tx.category] = current + tx.amount;
       }
 
-      // Enrich each budget item with actual spent amount
+      // Enrich each budget item with actual spent amount.
+      // TODO: Refactor matching when Transaction schema supports categoryId as a relation.
+      // Currently matches on item.name (free-text) against transaction.category (free-text).
       const itemsWithProgress = budget.items.map((item) => {
         const spent = spentMap[item.name] ?? 0;
         return {
