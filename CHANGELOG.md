@@ -76,6 +76,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `apps/web/app/layout.tsx` and `apps/web/app/page.tsx`: Added explicit `: React.JSX.Element` return type to `RootLayout` and `HomePage` to fix TS2742 portability error caused by `@types/react` version fragmentation in pnpm store (`18.2.79` from `apps/mobile` vs `18.3.28` from `apps/web`)
 
+### Added — Step 1.4: Expo React Native Mobile App Bootstrap (apps/mobile) (2026-04-11)
+
+- `apps/mobile/app.json`: Expo SDK 51 config — expo-router plugin, scheme: `finance-manager`, `typedRoutes: true`, Metro web bundler enabled (file: `apps/mobile/app.json`)
+- `apps/mobile/global.css`: 3 NativeWind/Tailwind directives — `@tailwind base`, `components`, `utilities` (file: `apps/mobile/global.css`)
+- `apps/mobile/tailwind.config.js`: CJS Tailwind config — `nativewind/preset`, brand color tokens (`primary`, `secondary`, `destructive`, `background`, `foreground`) (file: `apps/mobile/tailwind.config.js`)
+- `apps/mobile/babel.config.js`: `babel-preset-expo` with `nativewind/babel` (first) and `react-native-reanimated/plugin` (last) — required plugin order (file: `apps/mobile/babel.config.js`)
+- `apps/mobile/metro.config.js`: `withNativeWind` from `nativewind/metro`, `input: ./global.css` (file: `apps/mobile/metro.config.js`)
+- `apps/mobile/tsconfig.json`: Patched with `"types": ["nativewind/types"]` for NativeWind v4 className prop support (file: `apps/mobile/tsconfig.json`)
+- `apps/mobile/app/_layout.tsx`: Root Stack layout — `global.css` first import, `StatusBar` from `expo-status-bar`, `headerShown: false` (file: `apps/mobile/app/_layout.tsx`)
+- `apps/mobile/app/(tabs)/_layout.tsx`: 4-tab layout (Home, Transactions, Budget, Settings) — `Ionicons` icons, `useColorScheme` from `nativewind`, light/dark adaptive tab bar colors (file: `apps/mobile/app/(tabs)/_layout.tsx`)
+- `apps/mobile/app/(tabs)/index.tsx`, `transactions.tsx`, `budget.tsx`, `settings.tsx`: Skeleton screen components for all 4 tabs (files: `apps/mobile/app/(tabs)/`)
+- `apps/mobile/package.json`: `@expo/vector-icons@^14.0.0` added as explicit direct dependency (was previously only transitive) (file: `apps/mobile/package.json`)
+- Validation: `pnpm --filter @finance/mobile type-check` → EXIT CODE 0, zero TypeScript errors ✅
+
 ### Added — Step 1.2: Per-Package ESLint Configuration (2026-04-11)
 
 - Per-package `.eslintrc.js` in all 5 shared packages (`db`, `api`, `types`, `utils`, `ui`): extends `@finance/eslint-config`, sets `parserOptions.tsconfigRootDir` to `__dirname` for correct per-package TypeScript resolution (files: `packages/db/.eslintrc.js`, `packages/api/.eslintrc.js`, `packages/types/.eslintrc.js`, `packages/utils/.eslintrc.js`, `packages/ui/.eslintrc.js`)

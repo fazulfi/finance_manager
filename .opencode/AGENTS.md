@@ -93,18 +93,26 @@ packages/
 
 ## Orchestrator Workflow
 
-> These are the 8 workflow steps the orchestrator follows each session. Step 2 is conditional based on planner complexity rules; Steps 5–8 are wrap-up.
+> These are the 8 workflow steps the orchestrator follows each session. Step 2 is conditional based on planner complexity rules and always includes todo sync init; Steps 5–8 are wrap-up.
 
 | Step | Name | Owner | Description |
 |------|------|-------|-------------|
 | 1 | Receive Request | Orchestrator | Parse user intent; classify as refactor / build / research / etc. |
-| 2 | PLAN PHASE (when required) | Planner subagent | For non-trivial tasks, decompose work into ready-to-delegate steps; trivial tasks may skip this step per `.opencode/agents/planner.md` |
-| 3 | EXECUTION PHASE | Coder / Reviewer / Tester / etc. | Execute plan steps; quality gates enforced after every coder step |
+| 2 | PLAN PHASE (when required) + TODO INIT | Planner subagent + Orchestrator | For non-trivial tasks, decompose work into ready-to-delegate steps; trivial tasks may skip planner per `.opencode/agents/planner.md`. In all cases, initialize OpenCode UI todo state (`todowrite`) and mirror `.opencode/TODO.md` before execution starts |
+| 3 | EXECUTION PHASE | Coder / Reviewer / Tester / etc. | Execute steps with per-step status sync to both OpenCode UI todo state and `.opencode/TODO.md` |
 | 4 | RESULT PHASE | Orchestrator | Collect outputs from all subagents; verify acceptance criteria met |
 | 5 | DOCS PHASE | Docs subagent | Update README, CHANGELOG, AGENTS.md, DECISION_LOG; prepare git sync |
 | 6 | SESSION HANDOFF | Docs subagent | Append "Last Session" block to AGENTS.md so next session has full context |
 | 7 | **DOCS GIT SYNC GATE** | **Docs subagent** | Commit and push session docs/git changes to GitHub (see rules below) |
 | 8 | Final Response | Orchestrator | Synthesize and deliver final response to user |
+
+### Todo Sync Rules (Step 2 + Step 3)
+
+- OpenCode UI todo state (via `todowrite`) is the live task surface.
+- `.opencode/TODO.md` is the filesystem mirror and must match UI state.
+- Orchestrator updates both surfaces at every step transition: `pending` -> `in_progress` -> `completed` / `cancelled`.
+- Do not report progress before both surfaces are updated.
+- `todowrite` payload must use an array of todos with required fields (`content`, `status`, `priority`) and stable per-step ids.
 
 ### Docs Git Sync Rules (Step 7)
 
@@ -150,6 +158,7 @@ git push origin main
 | Step 1.1 | Turborepo monorepo infrastructure — root `tsconfig.json` (solution anchor), `prettier.config.js` (CommonJS), `.eslintrc.js` (CommonJS)  | ✅ Complete | 2026-04-11 |
 | Step 1.2 | Shared TypeScript and ESLint config verified; per-package `.eslintrc.js` created in all 5 shared packages; `packages/db/package.json` lint script patched | ✅ Complete | 2026-04-11 |
 | Step 1.3 | Next.js 14 web app bootstrap — `next.config.js` (standalone + transpilePackages), `tailwind.config.ts` (darkMode:class, 17 CSS var tokens), `postcss.config.js`, `.eslintrc.js`, `.env.example`, `app/globals.css`, `app/layout.tsx`, `app/page.tsx`; TS2742 fixed via explicit `React.JSX.Element` return types | ✅ Complete | 2026-04-11 |
+| Step 1.4 | Expo React Native mobile app bootstrap — `app.json` (SDK 51, expo-router, typedRoutes), `global.css`, `tailwind.config.js` (nativewind/preset, brand tokens), `babel.config.js` (nativewind first, reanimated last), `metro.config.js` (withNativeWind), `tsconfig.json` (nativewind/types), root `_layout.tsx`, 4-tab `(tabs)/_layout.tsx` (Ionicons, useColorScheme from nativewind), 4 skeleton screens; `@expo/vector-icons` pinned as direct dep; type-check EXIT CODE 0 ✅ | ✅ Complete | 2026-04-11 |
 
 _(Updated by docs agent after each completed phase)_
 
@@ -158,10 +167,10 @@ _(Updated by docs agent after each completed phase)_
 ## Last Session (2026-04-11)
 
 - Done:
-  - Completed Step 1.3: Next.js 14 web app bootstrap for apps/web/
-  - Created 8 files: next.config.js, tailwind.config.ts, postcss.config.js, .eslintrc.js, .env.example, app/globals.css, app/layout.tsx, app/page.tsx
-  - Fixed TS2742 by adding React.JSX.Element return types to RootLayout and HomePage
-  - Validation: pnpm install ✅, lint ✅, type-check ✅
-  - Build: TypeScript compilation + 4/4 static pages ✅; EPERM symlink on standalone output (Windows Developer Mode required — not a code defect)
-- In progress: Nothing — Step 1.3 fully complete
-- Next: Step 1.4 — Expo React Native mobile app setup (apps/mobile bootstrap with NativeWind, Expo Router)
+  - Completed Step 1.4: Expo React Native mobile app bootstrap for `apps/mobile/`
+  - Config files confirmed correct: `app.json` (SDK 51, expo-router, typedRoutes, Metro web), `global.css` (3 Tailwind directives), `tailwind.config.js` (nativewind/preset, brand tokens), `babel.config.js` (nativewind/babel first, reanimated/plugin last), `metro.config.js` (withNativeWind from nativewind/metro), `tsconfig.json` (nativewind/types patched)
+  - TSX files created: `app/_layout.tsx` (root Stack, StatusBar, headerShown:false), `app/(tabs)/_layout.tsx` (4 tabs, Ionicons, useColorScheme from nativewind, dark/light adaptive), `app/(tabs)/index.tsx`, `transactions.tsx`, `budget.tsx`, `settings.tsx` (4 skeleton screens)
+  - `@expo/vector-icons@^14.0.0` added as explicit direct dep in `apps/mobile/package.json`
+  - Validation: `pnpm --filter @finance/mobile type-check` → EXIT CODE 0, zero TypeScript errors ✅
+- In progress: Nothing — Step 1.4 fully complete
+- Next: Step 1.5 — tRPC + Prisma wiring (connect `packages/api/` routers to `packages/db/` PrismaClient; add first real procedure)
