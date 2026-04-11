@@ -1,0 +1,57 @@
+// apps/web/app/api/register/route.ts
+// Public registration endpoint — creates a new user with a bcrypt-hashed password.
+// Returns 409 on duplicate email. Password is NEVER returned in the response (select strips it).
+import { NextResponse } from "next/server";
+import { db } from "@finance/db";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
+
+const registerSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  name: z.string().min(1).max(100).optional(),
+});
+
+export async function POST(req: Request): Promise<NextResponse> {
+  try {
+    const body: unknown = await req.json();
+    const parsed = registerSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Invalid input", issues: parsed.error.flatten().fieldErrors },
+        { status: 400 },
+      );
+    }
+
+    const { email, password, name } = parsed.data;
+
+    const existing = await db.user.findUnique({ where: { email } });
+    if (existing) {
+      return NextResponse.json(
+        { error: "An account with this email already exists" },
+        { status: 409 },
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    const user = await db.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        ...(name != null ? { name } : {}),
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json(user, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}

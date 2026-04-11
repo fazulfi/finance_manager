@@ -2,8 +2,10 @@
   "extends": "@finance/tsconfig/nextjs.json",
   "compilerOptions": {
     "baseUrl": ".",
+    "declaration": false,
+    "declarationMap": false,
     "paths": {
-      "@/*": ["./src/*"],
+      "@/*": ["./*"],
       "@finance/ui": ["../../packages/ui/src/index.ts"],
       "@finance/types": ["../../packages/types/src/index.ts"],
       "@finance/utils": ["../../packages/utils/src/index.ts"],
