@@ -68,3 +68,4 @@ prisma/migrations/
 
 # opencode — AI agent workspace (keep entire directory private/local)
 .opencode/
+.opencode/AGENTS.md
