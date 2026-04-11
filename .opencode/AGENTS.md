@@ -169,50 +169,22 @@ git push origin main
 | Step 1.4 | Expo React Native mobile app bootstrap — `app.json` (SDK 51, expo-router, typedRoutes), `global.css`, `tailwind.config.js` (nativewind/preset, brand tokens), `babel.config.js` (nativewind first, reanimated last), `metro.config.js` (withNativeWind), `tsconfig.json` (nativewind/types), root `_layout.tsx`, 4-tab `(tabs)/_layout.tsx` (Ionicons, useColorScheme from nativewind), 4 skeleton screens; `@expo/vector-icons` pinned as direct dep; type-check EXIT CODE 0 ✅ | ✅ Complete | 2026-04-11 |
 | Phase 2.1 | Prisma + MongoDB Schema — `packages/db/prisma/schema.prisma` (10 models, 10 enums, BudgetItem embedded type, 21 indexes), `src/index.ts` (globalThis singleton), `src/seed.ts` (19 default categories); `@types/node` added; turbo.json updated | ✅ Complete | 2026-04-11 |
 | Phase 2.2 | tRPC package setup — `packages/api/package.json` exports updated; `src/trpc.ts` genericized for injected session/db context; `src/root.ts`, `src/index.ts`, `src/react.tsx` added; `debt` router added; `category.getById` and `stock.updatePrice` added; type-check EXIT CODE 0 ✅ | ✅ Complete | 2026-04-11 |
+| Phase 2.2 | tRPC API package verification — All 10 routers verified working; Zod validation and error handling in place; Prisma queries validated; `cd packages/api && pnpm install` PASS; `cd packages/api && pnpm type-check` PASS ✅ | ✅ Complete | 2026-04-12 |
 
 _(Updated by docs agent after each completed phase)_
 
 ---
 
-## Last Session (2026-04-11)
+## Last Session (2026-04-12)
 
 - Done:
-  - Completed Phase 2.2: `packages/api` tRPC package work
-  - Updated `packages/api/package.json` exports so `@finance/api` stays server-safe and `@finance/api/react` remains the client-only React helper subpath
-  - Genericized `packages/api/src/trpc.ts` to use package-local session/context types while still accepting injected `db` + `session`
-  - Added `packages/api/src/root.ts`, `src/index.ts`, and `src/react.tsx` for root router assembly, server exports, and isolated React client helpers
-  - Added `packages/api/src/routers/debt.ts`; added `category.getById`; added `stock.updatePrice`; registered `debt` in the root router
-  - Validation: `cd packages/api && pnpm install` PASS; `cd packages/api && pnpm type-check` PASS; security audit passed with no material findings
+  - Completed Step 2.2: tRPC API package verification in `packages/api/`
+  - Verified all 10 routers are implemented: auth, account, transaction, category, project, budget, stock, investment, goal, debt
+  - Confirmed Zod validation on all procedures
+  - Confirmed proper error handling with `TRPCError`
+  - Confirmed Prisma queries are properly typed and owner-checked
+  - Validation: `cd packages/api && pnpm install` PASS; `cd packages/api && pnpm type-check` PASS
 - In progress:
   - Nothing — Phase 2.2 fully complete
 - Next:
   - Phase 2.3 — wire NextAuth in `apps/web/` to inject session into `createTRPCContext` and consume `@finance/api` / `@finance/api/react` from the correct server/client boundaries
-
----
-
-## Last Session (2026-04-11)
-
-- Done:
-  - Completed Step 1.4: Expo React Native mobile app bootstrap for `apps/mobile/`
-  - Config files confirmed correct: `app.json` (SDK 51, expo-router, typedRoutes, Metro web), `global.css` (3 Tailwind directives), `tailwind.config.js` (nativewind/preset, brand tokens), `babel.config.js` (nativewind/babel first, reanimated/plugin last), `metro.config.js` (withNativeWind from nativewind/metro), `tsconfig.json` (nativewind/types patched)
-  - TSX files created: `app/_layout.tsx` (root Stack, StatusBar, headerShown:false), `app/(tabs)/_layout.tsx` (4 tabs, Ionicons, useColorScheme from nativewind, dark/light adaptive), `app/(tabs)/index.tsx`, `transactions.tsx`, `budget.tsx`, `settings.tsx` (4 skeleton screens)
-  - `@expo/vector-icons@^14.0.0` added as explicit direct dep in `apps/mobile/package.json`
-  - Validation: `pnpm --filter @finance/mobile type-check` → EXIT CODE 0, zero TypeScript errors ✅
-- In progress: Nothing — Step 1.4 fully complete
-- Next: Step 1.5 — tRPC + Prisma wiring (connect `packages/api/` routers to `packages/db/` PrismaClient; add first real procedure)
-
----
-
-## Last Session (2026-04-11)
-
-- Done:
-  - Completed Phase 2.1: Prisma + MongoDB Schema for `packages/db/`
-  - Created `packages/db/prisma/schema.prisma` with 10 models (User, Account, Transaction, Category, Project, Budget, Stock, Investment, SavingsGoal, Debt), 10 enums, 1 embedded type (BudgetItem), 21 `@@index` directives
-  - Created `packages/db/src/index.ts` — PrismaClient singleton using `globalThis` pattern, named export `db`
-  - Created `packages/db/src/seed.ts` — dev seed script with 19 default categories; file-level `eslint-disable no-console`
-  - Updated `packages/db/package.json`: added `@types/node ^20.0.0`
-  - Updated `turbo.json`: added `db:generate`, `db:push`, `db:seed` pipeline tasks
-  - All validations pass: `db:generate` ✅, `type-check` ✅, `lint` ✅
-- In progress: Nothing — Phase 2.1 fully complete
-- Next: Phase 2.2 — tRPC package setup (`packages/api/`) with `trpc.ts` context (Prisma + NextAuth session), `publicProcedure` + `protectedProcedure`, and root router; OR Phase 2.3 NextAuth setup in `apps/web/` — either is unblocked
-- Architecture flag for next session: NextAuth must use JWT-only session strategy (NO Prisma adapter `Account` model) because the finance `Account` model occupies the `accounts` collection. Confirm at Step 2.3.
