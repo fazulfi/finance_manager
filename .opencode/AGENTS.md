@@ -9,7 +9,7 @@
 **Name:** Personal Finance Manager Pro  
 **Stack:** Turborepo + Next.js 14 (App Router) + Expo React Native + tRPC + Prisma + MongoDB + TypeScript  
 **Blueprint:** See `.opencode/BLUEPRINT.md` for full roadmap (phases 0–6, features per week)  
-**Current Phase:** Phase 0 — Prerequisites & Environment Setup (not started)
+**Current Phase:** Phase 2.1 — Prisma + MongoDB Schema ✅ Complete; Phase 2.2 (tRPC package) or Phase 2.3 (NextAuth) is next
 
 ---
 
@@ -62,6 +62,9 @@ packages/
 - Dev schema sync: `pnpm --filter @finance/db prisma db push`
 - Always use `select` to avoid returning sensitive fields
 - Always paginate `findMany()` on large collections
+- `BudgetItem` is an embedded Prisma `type` (not `model`) — stored inside Budget document, no separate collection
+- `Transaction.transferTo` is a raw `String? @db.ObjectId` (no Prisma relation) — intentional to avoid circular relations
+- Default export from `@finance/db` is the `db` named export (PrismaClient singleton, `globalThis` pattern)
 
 ### Authentication
 
@@ -93,13 +96,13 @@ packages/
 
 ## Orchestrator Workflow
 
-> These are the 8 workflow steps the orchestrator follows each session. Step 2 is conditional based on planner complexity rules and always includes todo sync init; Steps 5–8 are wrap-up.
+> These are the 8 workflow steps the orchestrator follows each session. Step 2 is conditional based on planner complexity rules and includes todo sync init; Steps 5–8 are wrap-up.
 
 | Step | Name | Owner | Description |
 |------|------|-------|-------------|
 | 1 | Receive Request | Orchestrator | Parse user intent; classify as refactor / build / research / etc. |
-| 2 | PLAN PHASE (when required) + TODO INIT | Planner subagent + Orchestrator | For non-trivial tasks, decompose work into ready-to-delegate steps; trivial tasks may skip planner per `.opencode/agents/planner.md`. In all cases, initialize OpenCode UI todo state (`todowrite`) and mirror `.opencode/TODO.md` before execution starts |
-| 3 | EXECUTION PHASE | Coder / Reviewer / Tester / etc. | Execute steps with per-step status sync to both OpenCode UI todo state and `.opencode/TODO.md` |
+| 2 | PLAN PHASE (when required) + TODO INIT | Planner subagent + Orchestrator | For non-trivial tasks, decompose work into ready-to-delegate steps; trivial tasks may skip planner per `.opencode/agents/planner.md`. In all cases, write `.opencode/TODO.md` as the task template and initialize OpenCode UI todo state (`todowrite`) before execution starts |
+| 3 | EXECUTION PHASE | Coder / Reviewer / Tester / etc. | Execute steps with per-step status sync in OpenCode UI todo state (`todowrite`) |
 | 4 | RESULT PHASE | Orchestrator | Collect outputs from all subagents; verify acceptance criteria met |
 | 5 | DOCS PHASE | Docs subagent | Update README, CHANGELOG, AGENTS.md, DECISION_LOG; prepare git sync |
 | 6 | SESSION HANDOFF | Docs subagent | Append "Last Session" block to AGENTS.md so next session has full context |
@@ -108,10 +111,12 @@ packages/
 
 ### Todo Sync Rules (Step 2 + Step 3)
 
-- OpenCode UI todo state (via `todowrite`) is the live task surface.
-- `.opencode/TODO.md` is the filesystem mirror and must match UI state.
-- Orchestrator updates both surfaces at every step transition: `pending` -> `in_progress` -> `completed` / `cancelled`.
-- Do not report progress before both surfaces are updated.
+- `.opencode/TODO.md` is the task template artifact written once at task init.
+- OpenCode UI todo state (via `todowrite`) is the live runtime task surface.
+- Orchestrator parses all checklist steps in `.opencode/TODO.md` and writes them 1:1 into `todowrite` at init.
+- UI todo count must equal parsed `TODO.md` step count.
+- Orchestrator updates `todowrite` at every step transition: `pending` -> `in_progress` -> `completed` / `cancelled`.
+- Do not report progress before `todowrite` is updated.
 - `todowrite` payload must use an array of todos with required fields (`content`, `status`, `priority`) and stable per-step ids.
 
 ### Docs Git Sync Rules (Step 7)
@@ -159,6 +164,7 @@ git push origin main
 | Step 1.2 | Shared TypeScript and ESLint config verified; per-package `.eslintrc.js` created in all 5 shared packages; `packages/db/package.json` lint script patched | ✅ Complete | 2026-04-11 |
 | Step 1.3 | Next.js 14 web app bootstrap — `next.config.js` (standalone + transpilePackages), `tailwind.config.ts` (darkMode:class, 17 CSS var tokens), `postcss.config.js`, `.eslintrc.js`, `.env.example`, `app/globals.css`, `app/layout.tsx`, `app/page.tsx`; TS2742 fixed via explicit `React.JSX.Element` return types | ✅ Complete | 2026-04-11 |
 | Step 1.4 | Expo React Native mobile app bootstrap — `app.json` (SDK 51, expo-router, typedRoutes), `global.css`, `tailwind.config.js` (nativewind/preset, brand tokens), `babel.config.js` (nativewind first, reanimated last), `metro.config.js` (withNativeWind), `tsconfig.json` (nativewind/types), root `_layout.tsx`, 4-tab `(tabs)/_layout.tsx` (Ionicons, useColorScheme from nativewind), 4 skeleton screens; `@expo/vector-icons` pinned as direct dep; type-check EXIT CODE 0 ✅ | ✅ Complete | 2026-04-11 |
+| Phase 2.1 | Prisma + MongoDB Schema — `packages/db/prisma/schema.prisma` (10 models, 10 enums, BudgetItem embedded type, 21 indexes), `src/index.ts` (globalThis singleton), `src/seed.ts` (19 default categories); `@types/node` added; turbo.json updated | ✅ Complete | 2026-04-11 |
 
 _(Updated by docs agent after each completed phase)_
 
@@ -174,3 +180,19 @@ _(Updated by docs agent after each completed phase)_
   - Validation: `pnpm --filter @finance/mobile type-check` → EXIT CODE 0, zero TypeScript errors ✅
 - In progress: Nothing — Step 1.4 fully complete
 - Next: Step 1.5 — tRPC + Prisma wiring (connect `packages/api/` routers to `packages/db/` PrismaClient; add first real procedure)
+
+---
+
+## Last Session (2026-04-11)
+
+- Done:
+  - Completed Phase 2.1: Prisma + MongoDB Schema for `packages/db/`
+  - Created `packages/db/prisma/schema.prisma` with 10 models (User, Account, Transaction, Category, Project, Budget, Stock, Investment, SavingsGoal, Debt), 10 enums, 1 embedded type (BudgetItem), 21 `@@index` directives
+  - Created `packages/db/src/index.ts` — PrismaClient singleton using `globalThis` pattern, named export `db`
+  - Created `packages/db/src/seed.ts` — dev seed script with 19 default categories; file-level `eslint-disable no-console`
+  - Updated `packages/db/package.json`: added `@types/node ^20.0.0`
+  - Updated `turbo.json`: added `db:generate`, `db:push`, `db:seed` pipeline tasks
+  - All validations pass: `db:generate` ✅, `type-check` ✅, `lint` ✅
+- In progress: Nothing — Phase 2.1 fully complete
+- Next: Phase 2.2 — tRPC package setup (`packages/api/`) with `trpc.ts` context (Prisma + NextAuth session), `publicProcedure` + `protectedProcedure`, and root router; OR Phase 2.3 NextAuth setup in `apps/web/` — either is unblocked
+- Architecture flag for next session: NextAuth must use JWT-only session strategy (NO Prisma adapter `Account` model) because the finance `Account` model occupies the `accounts` collection. Confirm at Step 2.3.

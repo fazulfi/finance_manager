@@ -1,0 +1,320 @@
+// packages/db/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  CREDIT
+  INVESTMENT
+  CASH
+  OTHER
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+}
+
+enum ProjectStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+  CANCELLED
+}
+
+enum BudgetType {
+  MONTHLY
+  ANNUAL
+  CUSTOM
+}
+
+enum BudgetPeriod {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum Exchange {
+  NYSE
+  NASDAQ
+  LSE
+  OTHER
+}
+
+enum InvestmentType {
+  STOCK
+  BOND
+  CRYPTO
+  REAL_ESTATE
+  MUTUAL_FUND
+  OTHER
+}
+
+enum GoalStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+}
+
+enum DebtType {
+  CREDIT_CARD
+  MORTGAGE
+  STUDENT_LOAN
+  AUTO_LOAN
+  PERSONAL_LOAN
+  OTHER
+}
+
+// ─── Embedded Types ───────────────────────────────────────────────────────────
+
+/// Embedded budget line item — stored inside Budget document, not a collection
+type BudgetItem {
+  categoryId String @db.ObjectId
+  name       String
+  budgeted   Float
+  spent      Float  @default(0)
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String   @unique
+  name      String?
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  accounts     Account[]
+  transactions Transaction[]
+  categories   Category[]
+  projects     Project[]
+  budgets      Budget[]
+  stocks       Stock[]
+  investments  Investment[]
+  savingsGoals SavingsGoal[]
+  debts        Debt[]
+
+  @@map("users")
+}
+
+model Account {
+  id             String      @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String      @db.ObjectId
+  name           String
+  type           AccountType
+  currency       String      @default("IDR")
+  balance        Float       @default(0)
+  initialBalance Float       @default(0)
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  // Relations
+  user         User          @relation(fields: [userId], references: [id])
+  transactions Transaction[]
+  savingsGoals SavingsGoal[]
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Transaction {
+  id            String          @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String          @db.ObjectId
+  accountId     String          @db.ObjectId
+  date          DateTime
+  amount        Float
+  currency      String          @default("IDR")
+  type          TransactionType
+  category      String
+  subcategory   String?
+  project       String?
+  tags          String[]
+  description   String?
+  transferTo    String?         @db.ObjectId
+  isRecurring   Boolean         @default(false)
+  recurringRule String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id])
+  account Account @relation(fields: [accountId], references: [id])
+
+  @@index([userId])
+  @@index([accountId])
+  @@index([date])
+  @@index([type])
+  @@index([userId, date])
+  @@index([userId, type])
+  @@map("transactions")
+}
+
+model Category {
+  id        String       @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String       @db.ObjectId
+  name      String
+  type      CategoryType
+  parent    String?
+  icon      String?
+  color     String?
+  isDefault Boolean      @default(false)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([userId, type])
+  @@map("categories")
+}
+
+model Project {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String        @db.ObjectId
+  name        String
+  description String?
+  budget      Float?
+  spent       Float         @default(0)
+  startDate   DateTime?
+  targetDate  DateTime?
+  status      ProjectStatus @default(ACTIVE)
+  color       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([userId, status])
+  @@map("projects")
+}
+
+model Budget {
+  id        String       @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String       @db.ObjectId
+  name      String
+  type      BudgetType
+  period    BudgetPeriod
+  startDate DateTime
+  endDate   DateTime?
+  items     BudgetItem[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([userId, type])
+  @@map("budgets")
+}
+
+model Stock {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String   @db.ObjectId
+  ticker       String
+  name         String
+  exchange     Exchange @default(OTHER)
+  quantity     Float
+  avgBuyPrice  Float
+  currentPrice Float    @default(0)
+  totalCost    Float    @default(0)
+  currentValue Float    @default(0)
+  gain         Float    @default(0)
+  gainPercent  Float    @default(0)
+  lastUpdated  DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([userId, ticker])
+  @@map("stocks")
+}
+
+model Investment {
+  id           String         @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String         @db.ObjectId
+  name         String
+  type         InvestmentType
+  amount       Float
+  currentValue Float          @default(0)
+  cost         Float          @default(0)
+  gain         Float          @default(0)
+  notes        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([userId, type])
+  @@map("investments")
+}
+
+model SavingsGoal {
+  id            String     @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String     @db.ObjectId
+  name          String
+  targetAmount  Float
+  currentAmount Float      @default(0)
+  deadline      DateTime?
+  accountId     String?    @db.ObjectId
+  status        GoalStatus @default(ACTIVE)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  // Relations
+  user    User     @relation(fields: [userId], references: [id])
+  account Account? @relation(fields: [accountId], references: [id])
+
+  @@index([userId])
+  @@index([userId, status])
+  @@map("savings_goals")
+}
+
+model Debt {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String    @db.ObjectId
+  name         String
+  type         DebtType
+  totalAmount  Float
+  remaining    Float
+  interestRate Float
+  minPayment   Float
+  dueDate      DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([userId, type])
+  @@map("debts")
+}

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Phase 2.1: Prisma + MongoDB Schema (2026-04-11)
+
+- `packages/db/prisma/schema.prisma`: Full MongoDB schema with 10 models, 10 enums, BudgetItem embedded type
+  - Models: User, Account, Transaction, Category, Project, Budget, Stock, Investment, SavingsGoal, Debt
+  - Enums: AccountType, TransactionType, CategoryType, ProjectStatus, BudgetType, BudgetPeriod, Exchange, InvestmentType, GoalStatus, DebtType
+  - 21 `@@index` directives for common query patterns (userId, accountId, date, type, ticker, compound indexes)
+- `packages/db/src/index.ts`: PrismaClient singleton (`globalThis` pattern) — exported as `db`
+- `packages/db/src/seed.ts`: Development seed script with 19 default category entries
+
+### Modified — Phase 2.1 (2026-04-11)
+
+- `packages/db/package.json`: Added `@types/node ^20.0.0` to devDependencies
+- `turbo.json`: Added `db:generate`, `db:push`, `db:seed` pipeline tasks (all `cache: false`)
+
 ### Added — Phase 0: Prerequisites & Environment Setup (2026-04-11)
 
 **Monorepo Scaffold**
