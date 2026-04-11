@@ -93,26 +93,30 @@ packages/
 
 ## Orchestrator Workflow
 
-> These are the 8 steps the orchestrator runs in order at the end of every session. Steps 1–4 are execution; steps 5–8 are wrap-up.
+> These are the 8 workflow steps the orchestrator follows each session. Step 2 is conditional based on planner complexity rules; Steps 5–8 are wrap-up.
 
 | Step | Name | Owner | Description |
 |------|------|-------|-------------|
 | 1 | Receive Request | Orchestrator | Parse user intent; classify as refactor / build / research / etc. |
-| 2 | PLAN PHASE | Planner subagent | Decompose task into execution steps; produce ready-to-delegate plan |
+| 2 | PLAN PHASE (when required) | Planner subagent | For non-trivial tasks, decompose work into ready-to-delegate steps; trivial tasks may skip this step per `.opencode/agents/planner.md` |
 | 3 | EXECUTION PHASE | Coder / Reviewer / Tester / etc. | Execute plan steps; quality gates enforced after every coder step |
 | 4 | RESULT PHASE | Orchestrator | Collect outputs from all subagents; verify acceptance criteria met |
-| 5 | DOCS PHASE | Docs subagent | Update README, CHANGELOG, AGENTS.md, DECISION_LOG; **commit only — no push** |
+| 5 | DOCS PHASE | Docs subagent | Update README, CHANGELOG, AGENTS.md, DECISION_LOG; prepare git sync |
 | 6 | SESSION HANDOFF | Docs subagent | Append "Last Session" block to AGENTS.md so next session has full context |
-| 7 | **PUSH GATE** | **Orchestrator** | Push all session commits to GitHub (see rules below) |
+| 7 | **DOCS GIT SYNC GATE** | **Docs subagent** | Commit and push session docs/git changes to GitHub (see rules below) |
 | 8 | Final Response | Orchestrator | Synthesize and deliver final response to user |
 
-### Push Gate Rules (Step 7)
+### Docs Git Sync Rules (Step 7)
 
-The orchestrator — **not any subagent** — runs the push gate directly after SESSION HANDOFF and before delivering the final response.
+The docs agent runs git sync directly after SESSION HANDOFF and before final response delivery.
 
 **Algorithm:**
 ```bash
-# 1. Check for unpushed commits
+# 1. Stage and commit docs (if changed)
+git add README.md CHANGELOG.md .opencode/AGENTS.md .opencode/DECISION_LOG.md
+git commit -m "docs: update docs after [brief task description]"
+
+# 2. Check for unpushed commits
 git log origin/main..HEAD --oneline
 
 # If output is empty → nothing to push → skip silently (no message to user)
@@ -132,9 +136,9 @@ git push origin main
 
 **Hard constraints:**
 - ❌ Never `git push --force` — always plain `git push origin main`
-- ❌ Never push from any subagent — push is exclusively an orchestrator action
-- ❌ Docs subagent commits only (rule in `.opencode/agents/docs.md` line 129: `Do NOT push — commit only`) — this MUST NOT be changed
-- ❌ Do not skip the push gate even if DOCS PHASE produced no commits (always check; silently skip if clean)
+- ❌ Docs agent must report both commit and push status in output (`GIT COMMIT`, `GIT PUSH`)
+- ❌ Orchestrator must not run push directly; push is owned by docs agent
+- ❌ Do not skip the docs git sync gate even if DOCS PHASE produced no commits (always check; silently skip if clean)
 
 ---
 
@@ -145,6 +149,7 @@ git push origin main
 | Phase 0  | Prerequisites & Environment Setup — Turborepo scaffold, all workspace packages stubbed, shared tsconfig/eslint configs, VSCode settings | ✅ Complete | 2026-04-11 |
 | Step 1.1 | Turborepo monorepo infrastructure — root `tsconfig.json` (solution anchor), `prettier.config.js` (CommonJS), `.eslintrc.js` (CommonJS)  | ✅ Complete | 2026-04-11 |
 | Step 1.2 | Shared TypeScript and ESLint config verified; per-package `.eslintrc.js` created in all 5 shared packages; `packages/db/package.json` lint script patched | ✅ Complete | 2026-04-11 |
+| Step 1.3 | Next.js 14 web app bootstrap — `next.config.js` (standalone + transpilePackages), `tailwind.config.ts` (darkMode:class, 17 CSS var tokens), `postcss.config.js`, `.eslintrc.js`, `.env.example`, `app/globals.css`, `app/layout.tsx`, `app/page.tsx`; TS2742 fixed via explicit `React.JSX.Element` return types | ✅ Complete | 2026-04-11 |
 
 _(Updated by docs agent after each completed phase)_
 
@@ -153,11 +158,10 @@ _(Updated by docs agent after each completed phase)_
 ## Last Session (2026-04-11)
 
 - Done:
-  - Completed Step 1.2: Shared TypeScript and ESLint configuration verified and completed
-  - packages/tsconfig/ (base.json, nextjs.json, react-native.json) confirmed complete — zero changes needed
-  - packages/eslint-config/ (index.js, package.json) confirmed complete — zero changes needed
-  - Created per-package .eslintrc.js in packages/db, api, types, utils, ui (CommonJS, extends @finance/eslint-config, tsconfigRootDir: __dirname)
-  - Added missing "lint" script to packages/db/package.json
-  - All 9 validation checks passed (9/9)
-- In progress: Nothing — Step 1.2 fully complete
-- Next: Step 1.3 — Next.js 14 web app bootstrap (apps/web: App Router, TypeScript, Tailwind CSS, shadcn/ui setup)
+  - Completed Step 1.3: Next.js 14 web app bootstrap for apps/web/
+  - Created 8 files: next.config.js, tailwind.config.ts, postcss.config.js, .eslintrc.js, .env.example, app/globals.css, app/layout.tsx, app/page.tsx
+  - Fixed TS2742 by adding React.JSX.Element return types to RootLayout and HomePage
+  - Validation: pnpm install ✅, lint ✅, type-check ✅
+  - Build: TypeScript compilation + 4/4 static pages ✅; EPERM symlink on standalone output (Windows Developer Mode required — not a code defect)
+- In progress: Nothing — Step 1.3 fully complete
+- Next: Step 1.4 — Expo React Native mobile app setup (apps/mobile bootstrap with NativeWind, Expo Router)

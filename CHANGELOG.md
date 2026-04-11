@@ -61,6 +61,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Downgraded `@tanstack/react-query` from `^5.59.20` → `^4.36.1` in `apps/web` and `apps/mobile` — tRPC v10 (`@trpc/react-query@10.x`, `@trpc/next@10.x`) requires TanStack Query v4, not v5
 - Pinned `react-native-reanimated` to `~3.10.1` in `apps/mobile` — NativeWind 4 transitively resolved to `reanimated@4.3.0` which requires React Native 0.81-0.85; Expo SDK 51 requires reanimated 3.x
 
+### Added — Step 1.3: Next.js 14 Web App Bootstrap (apps/web) (2026-04-11)
+
+- `apps/web/next.config.js`: CJS Next.js config with `output: "standalone"` and `transpilePackages` for all 5 `@finance/*` workspace packages
+- `apps/web/tailwind.config.ts`: TypeScript Tailwind config with `darkMode: "class"`, CSS variable color tokens (shadcn/ui convention: 17 tokens), Inter font family via CSS variable, shadcn/ui border radius scale
+- `apps/web/postcss.config.js`: PostCSS config for Tailwind v3 (required for CSS processing)
+- `apps/web/.eslintrc.js`: ESLint config extending `@finance/eslint-config` + `next/core-web-vitals`
+- `apps/web/.env.example`: Environment variable template (`DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, Google OAuth placeholders)
+- `apps/web/app/globals.css`: Tailwind directives, light/dark CSS variable token system (17 tokens), `box-sizing` reset, `border-color` reset for shadcn/ui compatibility
+- `apps/web/app/layout.tsx`: Root layout — Server Component, Inter font (CSS variable mode), `Metadata` export, `suppressHydrationWarning`, explicit `React.JSX.Element` return type
+- `apps/web/app/page.tsx`: Landing page — Server Component, hero section (eyebrow label, headline, subheadline, feature badges, CTA), explicit `React.JSX.Element` return type
+
+### Fixed — Step 1.3 (2026-04-11)
+
+- `apps/web/app/layout.tsx` and `apps/web/app/page.tsx`: Added explicit `: React.JSX.Element` return type to `RootLayout` and `HomePage` to fix TS2742 portability error caused by `@types/react` version fragmentation in pnpm store (`18.2.79` from `apps/mobile` vs `18.3.28` from `apps/web`)
+
 ### Added — Step 1.2: Per-Package ESLint Configuration (2026-04-11)
 
 - Per-package `.eslintrc.js` in all 5 shared packages (`db`, `api`, `types`, `utils`, `ui`): extends `@finance/eslint-config`, sets `parserOptions.tsconfigRootDir` to `__dirname` for correct per-package TypeScript resolution (files: `packages/db/.eslintrc.js`, `packages/api/.eslintrc.js`, `packages/types/.eslintrc.js`, `packages/utils/.eslintrc.js`, `packages/ui/.eslintrc.js`)
