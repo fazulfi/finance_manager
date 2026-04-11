@@ -7,7 +7,8 @@
       "@finance/types": ["../../packages/types/src/index.ts"],
       "@finance/utils": ["../../packages/utils/src/index.ts"],
       "@finance/api": ["../../packages/api/src/index.ts"]
-    }
+    },
+    "types": ["nativewind/types"]
   },
   "include": ["**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules"]

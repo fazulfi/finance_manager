@@ -13,6 +13,7 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:seed": "tsx src/seed.ts",
+    "lint": "eslint src/ --max-warnings 0",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
