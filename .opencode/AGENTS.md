@@ -9,7 +9,7 @@
 **Name:** Personal Finance Manager Pro  
 **Stack:** Turborepo + Next.js 14 (App Router) + Expo React Native + tRPC + Prisma + MongoDB + TypeScript  
 **Blueprint:** See `.opencode/BLUEPRINT.md` for full roadmap (phases 0–6, features per week)  
-**Current Phase:** Phase 2.1 — Prisma + MongoDB Schema ✅ Complete; Phase 2.2 (tRPC package) or Phase 2.3 (NextAuth) is next
+**Current Phase:** Phase 2.2 — tRPC package ✅ Complete; Phase 2.3 (NextAuth) is next
 
 ---
 
@@ -48,6 +48,8 @@ packages/
 - All inputs validated with Zod schemas
 - Ownership always enforced via `userId: ctx.session.user.id` in Prisma `where`
 - Errors thrown as `TRPCError` with proper codes: `NOT_FOUND`, `UNAUTHORIZED`, `FORBIDDEN`, `BAD_REQUEST`
+- `@finance/api` root export must stay server-safe; client React helpers belong only in `@finance/api/react`
+- `packages/api/src/trpc.ts` owns package-local session/context types and accepts injected `db` + `session`
 
 ### Next.js App Router Conventions
 
@@ -89,6 +91,7 @@ packages/
 - ❌ Forget `prisma generate` after schema change
 - ❌ `"use client"` on layout.tsx
 - ❌ tRPC client hooks in Server Components
+- ❌ Re-export `react.tsx` from `@finance/api` root entrypoint
 - ❌ Import `apps/*` from `packages/*`
 - ❌ N+1 queries — use `include`/`select` in Prisma
 - ❌ Return password, tokens, or secrets from any procedure
@@ -165,8 +168,25 @@ git push origin main
 | Step 1.3 | Next.js 14 web app bootstrap — `next.config.js` (standalone + transpilePackages), `tailwind.config.ts` (darkMode:class, 17 CSS var tokens), `postcss.config.js`, `.eslintrc.js`, `.env.example`, `app/globals.css`, `app/layout.tsx`, `app/page.tsx`; TS2742 fixed via explicit `React.JSX.Element` return types | ✅ Complete | 2026-04-11 |
 | Step 1.4 | Expo React Native mobile app bootstrap — `app.json` (SDK 51, expo-router, typedRoutes), `global.css`, `tailwind.config.js` (nativewind/preset, brand tokens), `babel.config.js` (nativewind first, reanimated last), `metro.config.js` (withNativeWind), `tsconfig.json` (nativewind/types), root `_layout.tsx`, 4-tab `(tabs)/_layout.tsx` (Ionicons, useColorScheme from nativewind), 4 skeleton screens; `@expo/vector-icons` pinned as direct dep; type-check EXIT CODE 0 ✅ | ✅ Complete | 2026-04-11 |
 | Phase 2.1 | Prisma + MongoDB Schema — `packages/db/prisma/schema.prisma` (10 models, 10 enums, BudgetItem embedded type, 21 indexes), `src/index.ts` (globalThis singleton), `src/seed.ts` (19 default categories); `@types/node` added; turbo.json updated | ✅ Complete | 2026-04-11 |
+| Phase 2.2 | tRPC package setup — `packages/api/package.json` exports updated; `src/trpc.ts` genericized for injected session/db context; `src/root.ts`, `src/index.ts`, `src/react.tsx` added; `debt` router added; `category.getById` and `stock.updatePrice` added; type-check EXIT CODE 0 ✅ | ✅ Complete | 2026-04-11 |
 
 _(Updated by docs agent after each completed phase)_
+
+---
+
+## Last Session (2026-04-11)
+
+- Done:
+  - Completed Phase 2.2: `packages/api` tRPC package work
+  - Updated `packages/api/package.json` exports so `@finance/api` stays server-safe and `@finance/api/react` remains the client-only React helper subpath
+  - Genericized `packages/api/src/trpc.ts` to use package-local session/context types while still accepting injected `db` + `session`
+  - Added `packages/api/src/root.ts`, `src/index.ts`, and `src/react.tsx` for root router assembly, server exports, and isolated React client helpers
+  - Added `packages/api/src/routers/debt.ts`; added `category.getById`; added `stock.updatePrice`; registered `debt` in the root router
+  - Validation: `cd packages/api && pnpm install` PASS; `cd packages/api && pnpm type-check` PASS; security audit passed with no material findings
+- In progress:
+  - Nothing — Phase 2.2 fully complete
+- Next:
+  - Phase 2.3 — wire NextAuth in `apps/web/` to inject session into `createTRPCContext` and consume `@finance/api` / `@finance/api/react` from the correct server/client boundaries
 
 ---
 

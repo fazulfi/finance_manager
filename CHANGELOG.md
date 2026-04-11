@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- [API] Add `debt` tRPC router with list, detail, create, update, delete, and summary procedures; register it in the root router (file: `packages/api/src/routers/debt.ts`)
+
+### Changed
+
+- [API] Split `packages/api` exports into a server-safe root entrypoint and a dedicated `@finance/api/react` client subpath (file: `packages/api/src/index.ts`)
+- [API] Generalize `createTRPCContext` session and DB typing so the package can accept injected context without direct `next-auth` or Prisma client type coupling (file: `packages/api/src/trpc.ts`)
+- [API] Add package root/router entry files for app router consumption and server-side caller creation (file: `packages/api/src/root.ts`)
+- [API] Add `category.getById` and `stock.updatePrice` procedures for package consumers (file: `packages/api/src/routers/category.ts`)
+
+### Fixed
+
+- [API] Keep the root package entrypoint free of client-only React exports so server consumers do not pull in `react.tsx` accidentally (file: `packages/api/src/index.ts`)
+
 ### Added — Phase 2.1: Prisma + MongoDB Schema (2026-04-11)
 
 - `packages/db/prisma/schema.prisma`: Full MongoDB schema with 10 models, 10 enums, BudgetItem embedded type
