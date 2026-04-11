@@ -9,19 +9,33 @@
     }
   },
   "scripts": {
+    "build": "tsc",
     "type-check": "tsc --noEmit",
     "lint": "eslint src/ --max-warnings 0"
   },
   "dependencies": {
     "@trpc/server": "^10.45.2",
+    "@trpc/client": "^10.45.2",
+    "@trpc/react-query": "^10.45.2",
+    "@trpc/next": "^10.45.2",
     "@finance/db": "workspace:*",
     "@finance/types": "workspace:*",
+    "@prisma/client": "^5.22.0",
+    "next-auth": "5.0.0-beta.25",
     "zod": "^3.23.8",
     "superjson": "^2.2.2"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "@tanstack/react-query": "^4.0.0"
   },
   "devDependencies": {
     "@finance/tsconfig": "workspace:*",
     "@finance/eslint-config": "workspace:*",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
     "typescript": "^5.6.3"
   }
 }
