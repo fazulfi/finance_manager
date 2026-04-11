@@ -37,6 +37,16 @@ export const categoryRouter = router({
       return { items, total, page, limit };
     }),
 
+  getById: protectedProcedure.input(z.object({ id: z.string() })).query(async ({ ctx, input }) => {
+    const category = await ctx.db.category.findFirst({
+      where: { id: input.id, userId: ctx.session.user.id },
+    });
+    if (!category) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Category not found" });
+    }
+    return category;
+  }),
+
   create: protectedProcedure
     .input(
       z.object({

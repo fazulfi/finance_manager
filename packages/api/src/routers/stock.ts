@@ -112,6 +112,38 @@ export const stockRouter = router({
       });
     }),
 
+  updatePrice: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        currentPrice: z.number().positive(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.stock.findFirst({
+        where: { id: input.id, userId: ctx.session.user.id },
+      });
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Stock not found" });
+      }
+
+      const currentValue = existing.quantity * input.currentPrice;
+      const totalCost = existing.quantity * existing.avgBuyPrice;
+      const gain = currentValue - totalCost;
+      const gainPercent = totalCost > 0 ? (gain / totalCost) * 100 : 0;
+
+      return ctx.db.stock.update({
+        where: { id: input.id },
+        data: {
+          currentPrice: input.currentPrice,
+          currentValue,
+          gain,
+          gainPercent,
+          lastUpdated: new Date(),
+        },
+      });
+    }),
+
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {

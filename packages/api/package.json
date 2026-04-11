@@ -6,6 +6,18 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./react": {
+      "types": "./src/react.tsx",
+      "default": "./src/react.tsx"
+    },
+    "./root": {
+      "types": "./src/root.ts",
+      "default": "./src/root.ts"
+    },
+    "./trpc": {
+      "types": "./src/trpc.ts",
+      "default": "./src/trpc.ts"
     }
   },
   "scripts": {
@@ -14,28 +26,30 @@
     "lint": "eslint src/ --max-warnings 0"
   },
   "dependencies": {
-    "@trpc/server": "^10.45.2",
     "@trpc/client": "^10.45.2",
-    "@trpc/react-query": "^10.45.2",
     "@trpc/next": "^10.45.2",
-    "@finance/db": "workspace:*",
+    "@trpc/react-query": "^10.45.2",
+    "@trpc/server": "^10.45.2",
     "@finance/types": "workspace:*",
-    "@prisma/client": "^5.22.0",
-    "next-auth": "5.0.0-beta.25",
-    "zod": "^3.23.8",
-    "superjson": "^2.2.2"
+    "superjson": "^2.2.2",
+    "zod": "^3.23.8"
   },
   "peerDependencies": {
+    "@finance/db": "workspace:*",
+    "@tanstack/react-query": "^4.0.0",
     "react": "^18.0.0",
-    "react-dom": "^18.0.0",
-    "@tanstack/react-query": "^4.0.0"
+    "react-dom": "^18.0.0"
   },
   "devDependencies": {
-    "@finance/tsconfig": "workspace:*",
+    "@finance/db": "workspace:*",
     "@finance/eslint-config": "workspace:*",
+    "@finance/tsconfig": "workspace:*",
+    "@tanstack/react-query": "^4.0.0",
     "@types/node": "^20.0.0",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
     "typescript": "^5.6.3"
   }
 }

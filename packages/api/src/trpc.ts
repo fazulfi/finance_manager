@@ -1,15 +1,34 @@
 // packages/api/src/trpc.ts
 import { initTRPC, TRPCError } from "@trpc/server";
-import { type Session } from "next-auth";
+import type { db as defaultDb } from "@finance/db";
 import superjson from "superjson";
-import { type PrismaClient } from "@prisma/client";
 import { ZodError } from "zod";
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
+export type DbClient = typeof defaultDb;
+
+export interface SessionUser {
+  id?: string | null;
+  email?: string | null;
+  name?: string | null;
+  image?: string | null;
+}
+
+export interface Session {
+  user?: SessionUser | null;
+  expires?: string;
+}
+
+export interface AuthedSession extends Session {
+  user: SessionUser & {
+    id: string;
+  };
+}
+
 export interface CreateContextOptions {
   session: Session | null;
-  db: PrismaClient;
+  db: DbClient;
 }
 
 /**
@@ -48,11 +67,13 @@ const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
   if (!ctx.session?.user?.id) {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
+
   return next({
     ctx: {
-      // Narrow the session type: user.id is guaranteed string from here on.
-      // We spread to preserve all other session fields (name, email, expires, etc.)
-      session: { ...ctx.session, user: { ...ctx.session.user, id: ctx.session.user.id } },
+      session: {
+        ...ctx.session,
+        user: { ...ctx.session.user, id: ctx.session.user.id },
+      } as AuthedSession,
     },
   });
 });
