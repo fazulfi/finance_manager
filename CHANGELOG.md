@@ -48,6 +48,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Hardened root `.gitignore`: added `.env.development` and `.env.test` patterns to prevent accidental commit of non-local env files; added `*.pem` to block SSL/TLS certificate files; added `logs/` to block log directories; consolidated individual `.opencode/*` file entries into a single `.opencode/` directory exclusion to keep AI agent workspace files private/local (file: `.gitignore`)
 
+### Fixed — Orchestrator TODO Generation System (2026-04-11)
+
+- [Workflow] Fixed orchestrator TODO generation — `orchestrator.md` `## Final` template block now includes Push Gate as mandatory Step N+2 (previously only had docs update + session handoff as 2 steps; now 3 steps with N/N+1/N+2 placeholders instead of hardcoded numbers); added OVERWRITE rule: `TODO.md` is always fully overwritten when a new task starts — prevents stale step accumulation from prior sessions; `TODO.md` reset to clean idle-state format with Last Completed summary (files: `.opencode/agents/orchestrator.md` lines 347–355, `.opencode/TODO.md`)
+
 ### Fixed — Orchestrator Push Gate Never Executed (2026-04-11)
 
 - [Workflow] Push Gate now correctly implemented in `orchestrator.md` `<operating_workflow>` Step 7 — previously documented in `AGENTS.md` only but never executed because `orchestrator.md` (the actual instruction file) lacked the logic; orchestrator now runs `git log origin/main..HEAD --oneline` to detect unpushed commits, then pushes via `git push origin main`, skips silently if branch is clean, and warns on failure; quality gates list in `orchestrator.md` also updated with Push Gate entry (file: `.opencode/agents/orchestrator.md` lines 408–426, 439)
