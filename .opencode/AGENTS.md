@@ -9,7 +9,7 @@
 **Name:** Personal Finance Manager Pro
 **Stack:** Turborepo + Next.js 14 (App Router) + Expo React Native + tRPC + Prisma + MongoDB + TypeScript
 **Blueprint:** See `.opencode/BLUEPRINT.md` for full roadmap (phases 0–6, features per week)
-**Current Phase:** Phase 2.6 — Shared Utils Package ✅ Complete
+**Current Phase:** Step 2.7 — Account Management Implementation ✅ Complete
 
 ---
 
@@ -50,6 +50,7 @@ packages/
 - Errors thrown as `TRPCError` with proper codes: `NOT_FOUND`, `UNAUTHORIZED`, `FORBIDDEN`, `BAD_REQUEST`
 - `@finance/api` root export must stay server-safe; client React helpers belong only in `@finance/api/react`
 - `packages/api/src/trpc.ts` owns package-local session/context types and accepts injected `db` + `session`
+- Account transfer procedures must enforce business invariants server-side (source and destination accounts must be active and use the same currency)
 
 ### Input Validation Conventions (established 2026-04-12)
 
@@ -69,6 +70,7 @@ packages/
 - Data fetching in Server Components via server-side tRPC caller
 - Client Components for interactive UI (forms, modals, charts)
 - Never `"use client"` on layouts
+- Keep `apps/web/next.config.js` `extensionAlias` configured for workspace package `.js` imports that resolve to TS/TSX sources
 
 ### Prisma Conventions
 
@@ -82,7 +84,7 @@ packages/
 
 ### Authentication
 
-- NextAuth.js v5 (`next-auth@beta`) with Prisma adapter
+- NextAuth.js v5 (`next-auth@beta`) with JWT sessions and manual user upsert (no Prisma adapter)
 - Providers: Google OAuth + Credentials
 - Session strategy: JWT
 - Route protection via `middleware.ts` matcher
@@ -111,6 +113,7 @@ packages/
 - ❌ Prisma `update`/`delete` with bare `{ id }` in WHERE — always include `userId` alongside `id`
 - ❌ Bare `z.string()` for MongoDB ObjectId inputs — always use `objectId` from `trpc.ts`
 - ❌ Unbounded string/array inputs — always add `.max()` constraints
+- ❌ Allow account transfers between inactive accounts or mismatched currencies
 
 ## Orchestrator Workflow
 
@@ -218,6 +221,7 @@ git push origin main
 | Step 2.4 | Shared UI Components — Fixed all TypeScript compilation issues: 4 barrel files, 20 import paths, TS4023 form context, unused imports; added base component exports (Button, Card, Input, Label); created packages/types and packages/utils stubs; Prisma client generated; type-check PASS ✅ | ✅ Complete | 2026-04-12 |
 | Phase 2.5 | Shared Types Package — Create complete @finance/types package with TypeScript interfaces, Zod schemas, and API types; implemented 5 source files (enums.ts, models.ts, api.ts, forms.ts, index.ts); added 10 Prisma enums, 11 model interfaces, 46 tRPC procedure types, 10 form validation schemas; fixed BudgetItemInput contract; installed @typescript-eslint/eslint-plugin; type-check PASS ✅ | ✅ Complete | 2026-04-12 |
 | Phase 2.6 | Shared Utils Package — Create complete @finance/utils package with 5 utility modules (currency, date, number, validation, calculations); implement 4 comprehensive test files with 191 tests total; fix Unicode property escape for robust currency parsing; all utilities fully typed and tested ✅ | ✅ Complete | 2026-04-12 |
+| Step 2.7 | Account Management implementation — `Account.description` support, account router CRUD + atomic `transfer`, account web routes/components, providers + toast + skeleton infra, optimistic transfer/delete UX; type-check PASS for `@finance/types`, `@finance/api`, `@finance/ui`, `@finance/web` | ✅ Complete | 2026-04-12 |
 
 _(Updated by docs agent after each completed phase)_
 
@@ -316,3 +320,27 @@ _(Updated by docs agent after each completed phase)_
 - Fix @finance/api missing @tanstack/react-query dependency if needed
 - Build first consumer UI components in apps/web using @finance/ui and @finance/types exports
 - Consider updating test expectations to clarify actual behavior (U+202f supported, U+00A0 rejected per test spec)
+
+---
+
+## Last Session (2026-04-12) — Step 2.7 Account Management + Docs Sync
+
+**Done:**
+- Added `Account.description` support end-to-end across Prisma schema, shared types/forms, tRPC account contracts, and web account forms
+- Expanded `account` router coverage for list/getById/create/update/delete and added atomic `transfer` mutation
+- Added account management web routes and components: list/new/detail/loading pages, `AccountCard`, `AccountForm`, `AccountList`, `TransferDialog`
+- Added shared web UX plumbing: `apps/web/app/providers.tsx`, shared skeleton + toast primitives, `Toaster`, and `use-toast`; wired providers/toaster in root layout
+- Added optimistic delete/transfer interactions and toast feedback for account mutations
+- Added `extensionAlias` in `apps/web/next.config.js` to resolve workspace `.js` imports from TS sources
+- Updated docs artifacts for this step: `CHANGELOG.md`, `.opencode/DECISION_LOG.md`, `.opencode/AGENTS.md`
+
+**In progress:**
+- None
+
+**Known issues:**
+- `pnpm --filter @finance/web build` compile path is healthy, but standalone trace write can fail on Windows with `EPERM` symlink permissions (environment-level)
+- `pnpm --filter @finance/db prisma db push` fails when local MongoDB is unavailable at `localhost` (environment-level)
+
+**Next:**
+- If needed, add a focused README API section for `account.transfer` request/response shape and auth expectations
+- Resolve local environment blockers (Windows symlink permissions, MongoDB availability) before full local production-like verification

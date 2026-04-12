@@ -45,6 +45,7 @@ export interface Account {
   id: string; // MongoDB ObjectId
   userId: string; // Foreign key (ObjectId)
   name: string;
+  description?: string;
   type: AccountType;
   currency: string; // ISO currency code, defaults to "IDR"
   balance: number;

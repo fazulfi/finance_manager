@@ -31,12 +31,28 @@ export const userFormSchema = z.object({
  */
 export const accountFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(255, "Name too long"),
+  description: z.string().max(500, "Description too long").optional(),
   type: z.nativeEnum(AccountType, {
     errorMap: () => ({ message: "Invalid account type" }),
   }),
   currency: z.string().min(1, "Currency is required").max(10, "Currency code too long").optional(),
   initialBalance: z.coerce.number().min(0, "Initial balance cannot be negative").optional(),
 });
+
+export const transferFormSchema = z
+  .object({
+    fromAccountId: z.string().regex(objectIdRegex, { message: "Invalid source account ID format" }),
+    toAccountId: z
+      .string()
+      .regex(objectIdRegex, { message: "Invalid destination account ID format" }),
+    amount: z.coerce.number().positive("Transfer amount must be greater than 0"),
+    description: z.string().max(500, "Description too long").optional(),
+    date: z.coerce.date({ message: "Invalid date format" }).optional(),
+  })
+  .refine((data) => data.fromAccountId !== data.toAccountId, {
+    message: "Source and destination accounts must be different",
+    path: ["toAccountId"],
+  });
 
 /**
  * Transaction form schema — Create/Edit transaction form

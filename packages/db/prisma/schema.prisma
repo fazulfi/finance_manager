@@ -121,6 +121,7 @@ model Account {
   id             String      @id @default(auto()) @map("_id") @db.ObjectId
   userId         String      @db.ObjectId
   name           String
+  description    String?
   type           AccountType
   currency       String      @default("IDR")
   balance        Float       @default(0)

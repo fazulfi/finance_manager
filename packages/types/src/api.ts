@@ -49,6 +49,7 @@ export interface PageOutput<T> {
  */
 export interface CreateAccountInput {
   name: string;
+  description?: string;
   type: AccountType;
   currency?: string;
   initialBalance?: number;
@@ -57,9 +58,8 @@ export interface CreateAccountInput {
 export interface UpdateAccountInput {
   id: string;
   name?: string;
+  description?: string;
   type?: AccountType;
-  currency?: string;
-  isActive?: boolean;
 }
 
 export interface AccountParams {
@@ -68,9 +68,23 @@ export interface AccountParams {
 
 export interface AccountListInput extends PageInput {
   type?: AccountType;
+  isActive?: boolean;
 }
 
 export type AccountListOutput = PageOutput<Account>;
+
+export interface TransferInput {
+  fromAccountId: string;
+  toAccountId: string;
+  amount: number;
+  description?: string;
+  date?: Date;
+}
+
+export interface AccountDetailOutput {
+  account: Account;
+  transactions: PageOutput<Transaction>;
+}
 
 /**
  * Transaction router types

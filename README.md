@@ -10,6 +10,7 @@ Personal finance monorepo with shared web, mobile, API, and database packages.
 - Shared tRPC package in `packages/api` with server-safe root exports
 - Client-only React helpers isolated behind `@finance/api/react`
 - Debt router plus category and stock procedure coverage for CRUD-style finance flows
+- Account management flow with paginated list/detail/create/update/delete and atomic same-currency transfers
 
 ## Tech Stack
 
@@ -43,7 +44,6 @@ Personal finance monorepo with shared web, mobile, API, and database packages.
      3. Create OAuth 2.0 credentials with redirect URIs: `http://localhost:3000/api/auth/callback/google`
      4. Add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to `apps/web/.env`
 5. Start the workspace dev pipeline:
-6. Start the workspace dev pipeline:
 
    ```bash
    pnpm dev
@@ -81,7 +81,12 @@ These are tRPC router domains exposed from `packages/api/src/root.ts`.
 
 ### Accounts, Transactions, Projects, Budgets, Investments, Goals
 
-- `account.*`
+- `account.list`
+- `account.getById`
+- `account.create`
+- `account.update`
+- `account.delete`
+- `account.transfer`
 - `transaction.*`
 - `project.*`
 - `budget.*`

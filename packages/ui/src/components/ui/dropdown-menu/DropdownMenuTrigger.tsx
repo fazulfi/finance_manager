@@ -1,5 +1,4 @@
 import * as React from "react";
-import { Slot } from "@radix-ui/react-slot";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { cn } from "../../../lib/utils";
 
@@ -9,8 +8,20 @@ const DropdownMenuTrigger = React.forwardRef<
     asChild?: boolean;
   }
 >(({ className, asChild = false, ...props }, ref) => {
-  const Comp = asChild ? Slot : DropdownMenuPrimitive.Trigger;
-  return <Comp ref={ref} className={cn("inline-flex", className)} {...props} />;
+  if (asChild) {
+    return (
+      <DropdownMenuPrimitive.Trigger
+        ref={ref}
+        asChild
+        className={cn("inline-flex", className)}
+        {...props}
+      />
+    );
+  }
+
+  return (
+    <DropdownMenuPrimitive.Trigger ref={ref} className={cn("inline-flex", className)} {...props} />
+  );
 });
 DropdownMenuTrigger.displayName = DropdownMenuPrimitive.Trigger.displayName;
 

@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- [Accounts] Add end-to-end `Account.description` support across Prisma schema, shared contracts, and account forms/UI (files: `packages/db/prisma/schema.prisma`, `packages/types/src/models.ts`, `packages/types/src/forms.ts`, `apps/web/components/accounts/AccountForm.tsx`)
+- [Accounts] Implement account management web surfaces (list/new/detail/loading) with reusable account components and mutation feedback toasts (files: `apps/web/app/accounts/page.tsx`, `apps/web/app/accounts/new/page.tsx`, `apps/web/app/accounts/[id]/page.tsx`, `apps/web/components/accounts/`)
+- [Accounts] Add atomic `account.transfer` procedure with server-side balance updates and optimistic transfer/delete UX on web (files: `packages/api/src/routers/account.ts`, `apps/web/components/accounts/TransferDialog.tsx`)
+- [UI] Add shared providers, skeleton, and toast primitives + toaster wiring for account UX states (files: `apps/web/app/providers.tsx`, `apps/web/app/layout.tsx`, `packages/ui/src/components/ui/skeleton.tsx`, `packages/ui/src/components/ui/toaster.tsx`, `packages/ui/src/hooks/use-toast.ts`)
+
 - [Auth] Complete NextAuth.js v5 authentication system — JWT strategy, Google OAuth, and Credentials provider with manual user upsert (no Prisma adapter accounts collection)
 - [Auth] Create `.env` file with generated `NEXTAUTH_SECRET` and all required environment variables
 - [Auth] Create dashboard page `apps/web/app/(dashboard)/page.tsx` as Server Component for middleware testing
@@ -57,6 +62,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Types] Add @typescript-eslint/eslint-plugin as dev dependency for improved TypeScript error reporting in types package (file: `packages/types/package.json`)
 
 ### Changed
+
+- [Web] Add `extensionAlias` mapping in Next.js config so `.js` imports resolve to workspace TypeScript sources during local build/type-check flows (file: `apps/web/next.config.js`)
+- [Accounts] Enforce transfer policy to reject transfers involving inactive accounts or mismatched currencies (file: `packages/api/src/routers/account.ts`)
+- [Verification] Validate `@finance/types`, `@finance/api`, `@finance/ui`, and `@finance/web` type-check passes; note unresolved environment blockers for web standalone trace symlink (`EPERM` on Windows) and `prisma db push` without local MongoDB (files: `apps/web/next.config.js`, `packages/db/prisma/schema.prisma`)
 
 - [Workflow] Use a single current plan artifact at `.opencode/plans/current-plan.md`; orchestrator now overwrites it with the latest planner draft verbatim before review and on every revision, reviewer reads that file directly, and the approved file then anchors TODO sync and execution briefings (files: `.opencode/agents/planner.md`, `.opencode/agents/orchestrator.md`, `.opencode/AGENTS.md`)
 - [Workflow] Allow planner to read `.env` / `.env.*` when config affects planning, with explicit redaction rules so plan files may mention variable names and non-sensitive findings but never raw secret values (files: `.opencode/agents/planner.md`, `.opencode/AGENTS.md`)
