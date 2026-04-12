@@ -1,4 +1,8 @@
 // @finance/utils — Pure utility functions
-// Stub file — utilities will be added as features are built
+// Re-exports for easy access across monorepo
 
-export {};
+export * from "./currency";
+export * from "./date";
+export * from "./number";
+export * from "./validation";
+export * from "./calculations";

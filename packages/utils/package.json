@@ -10,7 +10,8 @@
   },
   "scripts": {
     "type-check": "tsc --noEmit",
-    "lint": "eslint src/ --max-warnings 0"
+    "lint": "eslint src/ --max-warnings 0",
+    "test": "vitest"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -20,6 +21,8 @@
   "devDependencies": {
     "@finance/eslint-config": "workspace:*",
     "@finance/tsconfig": "workspace:*",
-    "typescript": "^5.6.3"
+    "@testing-library/jest-dom": "^6.6.3",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
   }
 }

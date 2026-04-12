@@ -27,6 +27,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Types] Update `packages/types/src/index.ts` — barrel exports organizing all types by domain (models, enums, api, forms)
 - [Types] Fix BudgetItemInput type contract by adding spent field to match Prisma BudgetItem embedded type (file: `packages/types/src/models.ts`)
 - [Types] Add @typescript-eslint/eslint-plugin as dev dependency for improved TypeScript error reporting in types package (file: `packages/types/package.json`)
+- [Utils] Create full @finance/utils package with pure utility functions (file: `packages/utils/`)
+- [Utils] Implement `packages/utils/src/currency.ts` — formatCurrency and parseCurrency functions with locale support and Unicode property escape fix (file: `packages/utils/src/currency.ts`)
+- [Utils] Implement `packages/utils/src/date.ts` — formatDate, getDateRange, formatRange, getRelativeDate functions (file: `packages/utils/src/date.ts`)
+- [Utils] Implement `packages/utils/src/number.ts` — formatNumber, formatCompactNumber, calculatePercentage functions (file: `packages/utils/src/number.ts`)
+- [Utils] Implement `packages/utils/src/validation.ts` — validateEmail, validatePhone, validatePositive, validateNonNegative, validateRequired functions (file: `packages/utils/src/validation.ts`)
+- [Utils] Implement `packages/utils/src/calculations.ts` — budgetRemaining, budgetSpentPercentage, projectProgress, stockValue, investmentROI, savingsGoalProgress functions (file: `packages/utils/src/calculations.ts`)
+- [Utils] Update `packages/utils/src/index.ts` — barrel exports organizing all utilities by domain (currency, date, number, validation, calculations)
+- [Utils] Create comprehensive test suite: date.test.ts, number.test.ts, validation.test.ts, calculations.test.ts with 191 total tests (file: `packages/utils/src/`)
+- [Utils] Implement Unicode property escape fix for parseCurrency to handle U+202f vs U+00A0 space characters (file: `packages/utils/src/currency.ts`)
+
+- [Auth] Complete NextAuth.js v5 authentication system — JWT strategy, Google OAuth, and Credentials provider with manual user upsert (no Prisma adapter accounts collection)
+- [Auth] Create `.env` file with generated `NEXTAUTH_SECRET` and all required environment variables
+- [Auth] Create dashboard page `apps/web/app/(dashboard)/page.tsx` as Server Component for middleware testing
+- [Auth] Create public registration endpoint `/api/register` with email/password validation and bcrypt hashing
+- [Auth] Verify all existing auth files: `auth.ts`, `middleware.ts`, `LoginForm.tsx`, `SignupForm.tsx`, `GoogleButton.tsx`, `login/page.tsx`, `signup/page.tsx`, `auth/[...nextauth]/route.ts`, `package.json`
+- [API] Verify tRPC API package in `packages/api/` - 10 routers fully implemented (auth, account, transaction, category, project, budget, stock, investment, goal, debt) with Zod validation and Prisma queries (file: `packages/api/src/`)
+- [API] Add `debt` tRPC router with list, detail, create, update, delete, and summary procedures; register it in the root router (file: `packages/api/src/routers/debt.ts`)
+- [UI] Base component exports (Button, Card, Input, Label) to `packages/ui/src/components/ui/index.ts` barrel (file: `packages/ui/src/components/ui/index.ts`)
+- [Infra] Stub `src/index.ts` files for `@finance/types` and `@finance/utils` packages — fixes TS18003 (files: `packages/types/src/index.ts`, `packages/utils/src/index.ts`)
+- [Infra] Generated Prisma client (`pnpm --filter @finance/db prisma generate`)
+- [Types] Create full @finance/types package with TypeScript interfaces, Zod schemas, and API types (file: `packages/types/`)
+- [Types] Implement `packages/types/src/enums.ts` — 10 TypeScript enums matching Prisma schema (AccountType, TransactionType, CategoryType, ProjectStatus, BudgetType, BudgetPeriod, Exchange, InvestmentType, GoalStatus, DebtType)
+- [Types] Implement `packages/types/src/models.ts` — 11 interfaces for all Prisma models (User, Account, Transaction, Category, Project, Budget, Stock, Investment, SavingsGoal, Debt, BudgetItem)
+- [Types] Implement `packages/types/src/api.ts` — 46 tRPC procedure input/output types covering all routers (auth, account, transaction, category, project, budget, stock, investment, goal, debt)
+- [Types] Implement `packages/types/src/forms.ts` — 10 Zod form validation schemas for client-side input validation
+- [Types] Update `packages/types/src/index.ts` — barrel exports organizing all types by domain (models, enums, api, forms)
+- [Types] Fix BudgetItemInput type contract by adding spent field to match Prisma BudgetItem embedded type (file: `packages/types/src/models.ts`)
+- [Types] Add @typescript-eslint/eslint-plugin as dev dependency for improved TypeScript error reporting in types package (file: `packages/types/package.json`)
 
 ### Changed
 
@@ -35,6 +63,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Workflow] Require broader planner discovery for non-trivial tasks and make reviewer reject plans whose evidence is too shallow for the task size; target depth now covers implementation, surrounding patterns, exports, config, consumers, types, tests/examples, and env/config when relevant (files: `.opencode/agents/planner.md`, `.opencode/agents/reviewer.md`, `.opencode/AGENTS.md`)
 - [Workflow] Upgrade planner discovery from count-based depth to task-specific coverage matrices; UI plans now must cover root/workspace, target package, consumer apps, config, and usage patterns, while reviewer rejects plans that miss required surfaces for their task type (files: `.opencode/agents/planner.md`, `.opencode/agents/reviewer.md`, `.opencode/AGENTS.md`)
 - [Workflow] Simplify planning flow so orchestrator writes `.opencode/plans/current-plan.md` before review; reviewer now reads that file as the latest planner draft, and every planner revision overwrites the same file before the next review pass (files: `.opencode/agents/orchestrator.md`, `.opencode/agents/reviewer.md`, `.opencode/AGENTS.md`)
+- [Workflow] Add plan-integrity guardrails: orchestrator now sanity-checks `current-plan.md` before review, planner must use only real repo agent names and cover every major required outcome, and reviewer rejects stale task bodies, invented agents, contradictory file actions, or obvious repo-truth mismatches (files: `.opencode/agents/planner.md`, `.opencode/agents/reviewer.md`, `.opencode/agents/orchestrator.md`, `.opencode/AGENTS.md`)
+- [Workflow] Retune planner output toward Claude Code-style plan documents: the main body now prioritizes `Context`, `Dependencies to Add`, `Files to Create`, `Files to Modify`, `Implementation Order`, `Key Notes`, and `Verification`, while evidence/env/execution details move into supporting sections and sanity gates validate that shape (files: `.opencode/agents/planner.md`, `.opencode/agents/reviewer.md`, `.opencode/agents/orchestrator.md`, `.opencode/AGENTS.md`)
+- [Workflow] Upgrade orchestrator-to-subagent prompts into mini-plan briefings so each delegated step carries request summary, why-now context, owned required outcomes, file scope, verification target, and expected handoff instead of a thin one-line instruction (files: `.opencode/agents/orchestrator.md`, `.opencode/AGENTS.md`)
 - [Workflow] Expand docs-agent git sync from docs-only staging to repo-wide non-ignored staging; it now reviews candidate paths, stages with `git add -A`, checks staged files before commit, and blocks push when likely sensitive files are detected (files: `.opencode/agents/docs.md`, `.opencode/agents/orchestrator.md`, `.opencode/AGENTS.md`)
 - [API] Split `packages/api` exports into a server-safe root entrypoint and a dedicated `@finance/api/react` client subpath (file: `packages/api/src/index.ts`)
 - [API] Generalize `createTRPCContext` session and DB typing so the package can accept injected context without direct `next-auth` or Prisma client type coupling (file: `packages/api/src/trpc.ts`)

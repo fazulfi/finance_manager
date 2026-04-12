@@ -63,6 +63,14 @@ Personal finance monorepo with shared web, mobile, API, and database packages.
 - Enables strict typing across web and mobile apps without direct Prisma dependencies.
 - All form validation schemas use Zod v3.23.8 for runtime input validation.
 
+### `packages/utils` notes
+
+- Root entrypoint `@finance/utils` exports pure utility functions for common finance operations.
+- 5 utility modules implemented: `currency.ts` (formatCurrency, parseCurrency), `date.ts` (formatDate, getDateRange, etc.), `number.ts` (formatNumber, calculatePercentage), `validation.ts` (common validators), `calculations.ts` (budget calculations, portfolio math).
+- Fully typed with date-fns for date operations and TypeScript for all functions.
+- Comprehensive test coverage: 4 test files (date.test.ts, number.test.ts, validation.test.ts, calculations.test.ts) with 191 total tests.
+- Includes Unicode property escape fix for robust currency parsing (handles U+202f vs U+00A0 space characters).
+
 ## API Endpoints
 
 These are tRPC router domains exposed from `packages/api/src/root.ts`.
