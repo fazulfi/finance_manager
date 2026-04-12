@@ -93,6 +93,14 @@ These are tRPC router domains exposed from `packages/api/src/root.ts`.
 - `investment.*`
 - `goal.*`
 
+### `account.transfer` contract overview
+
+- **Auth:** protected procedure (`ctx.session.user.id` required)
+- **Input:** source `id`, destination `toAccountId`, and positive `amount`
+- **Server checks:** both accounts must belong to the current user, both must be active, and currencies must match
+- **Behavior:** transfer is atomic (single DB transaction): debit source balance + credit destination balance
+- **Errors:** `NOT_FOUND` (account missing/not owned), `BAD_REQUEST` (inactive account, cross-currency transfer, invalid amount)
+
 ### Categories
 
 - `category.list`
@@ -128,3 +136,8 @@ These are tRPC router domains exposed from `packages/api/src/root.ts`.
 | `NEXTAUTH_URL`         | `apps/web/.env.local`                     | Base URL for the web app auth callbacks                  |
 | `GOOGLE_CLIENT_ID`     | `apps/web/.env.local`                     | Optional Google OAuth client ID                          |
 | `GOOGLE_CLIENT_SECRET` | `apps/web/.env.local`                     | Optional Google OAuth client secret                      |
+
+## Troubleshooting (Known Local Environment Blockers)
+
+- **Windows Next.js standalone build trace (`EPERM`)**: local Windows environments can fail when writing symlink traces during standalone output. This is an OS permission constraint (Developer Mode/symlink permissions), not an account-management code defect.
+- **`prisma db push` connection failure**: `pnpm --filter @finance/db prisma db push` requires a reachable MongoDB instance (typically localhost). Start MongoDB locally (or via Docker) before running schema push.

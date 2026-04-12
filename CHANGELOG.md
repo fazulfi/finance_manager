@@ -10,9 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - [Accounts] Add end-to-end `Account.description` support across Prisma schema, shared contracts, and account forms/UI (files: `packages/db/prisma/schema.prisma`, `packages/types/src/models.ts`, `packages/types/src/forms.ts`, `apps/web/components/accounts/AccountForm.tsx`)
-- [Accounts] Implement account management web surfaces (list/new/detail/loading) with reusable account components and mutation feedback toasts (files: `apps/web/app/accounts/page.tsx`, `apps/web/app/accounts/new/page.tsx`, `apps/web/app/accounts/[id]/page.tsx`, `apps/web/components/accounts/`)
+- [Accounts] Implement account management web surfaces (list/new/detail/loading) with reusable account components and mutation feedback toasts (files: `apps/web/app/(dashboard)/accounts/page.tsx`, `apps/web/app/(dashboard)/accounts/new/page.tsx`, `apps/web/app/(dashboard)/accounts/[id]/page.tsx`, `apps/web/components/accounts/`)
 - [Accounts] Add atomic `account.transfer` procedure with server-side balance updates and optimistic transfer/delete UX on web (files: `packages/api/src/routers/account.ts`, `apps/web/components/accounts/TransferDialog.tsx`)
-- [UI] Add shared providers, skeleton, and toast primitives + toaster wiring for account UX states (files: `apps/web/app/providers.tsx`, `apps/web/app/layout.tsx`, `packages/ui/src/components/ui/skeleton.tsx`, `packages/ui/src/components/ui/toaster.tsx`, `packages/ui/src/hooks/use-toast.ts`)
+- [UI] Add shared providers, skeleton, and toast primitives + toaster wiring for account UX states (files: `apps/web/app/providers.tsx`, `apps/web/app/layout.tsx`, `packages/ui/src/components/ui/skeleton.tsx`, `packages/ui/src/components/ui/toaster.tsx`, `packages/ui/src/components/ui/use-toast.ts`)
 
 - [Auth] Complete NextAuth.js v5 authentication system — JWT strategy, Google OAuth, and Credentials provider with manual user upsert (no Prisma adapter accounts collection)
 - [Auth] Create `.env` file with generated `NEXTAUTH_SECRET` and all required environment variables
@@ -83,6 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- [UI] Fix `DropdownMenuTrigger` typing with explicit render branches to satisfy strict TypeScript checks in account menu usage (file: `packages/ui/src/components/ui/dropdown-menu/DropdownMenuTrigger.tsx`)
 - [UI] Fixed 4 broken barrel `index.ts` files in dialog/, dropdown-menu/, select/, tabs/ subdirectories — re-exports now point to correct per-component source files (files: `packages/ui/src/components/ui/dialog/index.ts`, `dropdown-menu/index.ts`, `select/index.ts`, `tabs/index.ts`)
 - [UI] Fixed 20 wrong import paths for `cn()` utility across dialog, select, popover, and layout components (files: `packages/ui/src/components/ui/dialog/`, `select/`, `popover/`, `layout/`)
 - [UI] Fixed TS4023 compilation error — exported `FormContextValue` interface from forms/Context.tsx (file: `packages/ui/src/components/forms/Context.tsx`)
