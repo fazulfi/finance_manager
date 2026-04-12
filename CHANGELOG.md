@@ -10,6 +10,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - [Mobile] Create base global CSS styles for mobile app with NativeWind directives, brand color variables, safe-area padding utilities, and custom scrollbar hiding (file: `apps/mobile/app/global.css`)
+- [Mobile] Add transaction quick-add components for Expo React Native app
+  - `CategoryPicker.tsx` — Icon grid picker with search and animations
+  - `AmountInput.tsx` — Numeric input with auto-formatting
+  - `DatePicker.tsx` — Month view calendar picker
+  - `TransactionItem.tsx` — Swipeable transaction card with gestures
+  - `TransactionList.tsx` — Paginated list with pull-to-refresh
+  - `HomeDashboard.tsx` — Balance overview and quick stats
+  - `QuickAddSheet.tsx` — Bottom sheet transaction form
+  - `offlineQueue.ts` — Offline transaction queue management
+  - `useTransactionSync.ts` — Network detection and auto-sync
+  - `trpc.ts` — tRPC client setup for Expo Router
+- Mobile app dependencies added:
+  - `react-native-gesture-handler@^2.18.1`
+  - `react-native-safe-area-context@^4.10.5`
+  - `react-native-screens@^3.31.1`
+  - `@react-native-async-storage/async-storage@^1.21.0`
+  - `date-fns@^3.0.0`
+  - `@expo/vector-icons@^14.0.0`
+- Utilities added:
+  - `packages/utils/src/cn.ts` — Tailwind class merging utility
 - [Accounts] Add end-to-end `Account.description` support across Prisma schema, shared contracts, and account forms/UI (files: `packages/db/prisma/schema.prisma`, `packages/types/src/models.ts`, `packages/types/src/forms.ts`, `apps/web/components/accounts/AccountForm.tsx`)
 - [Accounts] Implement account management web surfaces (list/new/detail/loading) with reusable account components and mutation feedback toasts (files: `apps/web/app/(dashboard)/accounts/page.tsx`, `apps/web/app/(dashboard)/accounts/new/page.tsx`, `apps/web/app/(dashboard)/accounts/[id]/page.tsx`, `apps/web/components/accounts/`)
 - [Accounts] Add atomic `account.transfer` procedure with server-side balance updates and optimistic transfer/delete UX on web (files: `packages/api/src/routers/account.ts`, `apps/web/components/accounts/TransferDialog.tsx`)

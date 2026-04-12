@@ -1,6 +1,6 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { Tabs } from "expo-router";
 import { useColorScheme } from "nativewind";
-import Ionicons from "@expo/vector-icons/Ionicons";
 
 type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
 
