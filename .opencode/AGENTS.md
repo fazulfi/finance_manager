@@ -332,15 +332,14 @@ _(Updated by docs agent after each completed phase)_
 - Added shared web UX plumbing: `apps/web/app/providers.tsx`, shared skeleton + toast primitives, `Toaster`, and `use-toast`; wired providers/toaster in root layout
 - Added optimistic delete/transfer interactions and toast feedback for account mutations
 - Added `extensionAlias` in `apps/web/next.config.js` to resolve workspace `.js` imports from TS sources
-- Updated docs artifacts for this step: `CHANGELOG.md`, `.opencode/DECISION_LOG.md`, `.opencode/AGENTS.md`
+- Completed final docs pass for this implementation: `README.md` (transfer contract + troubleshooting), `CHANGELOG.md`, `.opencode/DECISION_LOG.md`, `.opencode/AGENTS.md`
 
 **In progress:**
-- None
-
-**Known issues:**
-- `pnpm --filter @finance/web build` compile path is healthy, but standalone trace write can fail on Windows with `EPERM` symlink permissions (environment-level)
-- `pnpm --filter @finance/db prisma db push` fails when local MongoDB is unavailable at `localhost` (environment-level)
+- Environment-only validation blockers:
+  - `pnpm --filter @finance/db prisma db push` blocked until local MongoDB is reachable
+  - `pnpm --filter @finance/web build` blocked at standalone trace write on Windows (`EPERM` symlink permissions)
 
 **Next:**
-- If needed, add a focused README API section for `account.transfer` request/response shape and auth expectations
-- Resolve local environment blockers (Windows symlink permissions, MongoDB availability) before full local production-like verification
+- Start local MongoDB (or Docker MongoDB), then rerun `pnpm --filter @finance/db prisma db push`
+- Enable Windows symlink permissions (Developer Mode/admin context), then rerun `pnpm --filter @finance/web build`
+- Re-run final verification after both blockers are cleared
