@@ -152,58 +152,67 @@ _(Updated by docs agent after each completed phase)_
 
 ---
 
-## Last Session (2026-04-12) — Phase 3.2 Category Management System
+## Last Session (2026-04-13) — Phase 3.1 Budget Management System
 
 **Done:**
-- Created 11 category management files (web + mobile):
-  - Web: CategoryManager.tsx (list/grid cards), CategoryForm.tsx (create/edit), CategoryPicker.tsx (icon selection), IconPicker.tsx (emoji picker), ColorPicker.tsx (color selection), page.tsx (category list)
-  - Mobile: CategoryGrid.tsx (grid with usageCount badge), CategoryCard.tsx (mobile card), page.tsx (mobile category list)
-- Added Category.usageCount field to Prisma schema (Int, default 0) and TypeScript interface
-- Implemented category.list API procedure with usageCount aggregation (findMany transactions + Map counting)
-- Created Category seeding utility (seedDefaultCategories) and integrated into auth register flow
-- Added icon/color customization for custom categories (update mutation)
-- Added usageCount display on web: "X transactions" with singular/plural handling, "New" badge for 0-transaction categories
-- Added usageCount display on mobile: finger-print badge for active categories (usageCount > 0)
-- Implemented delete protection for default categories with confirmation dialog
-- Added expo-haptics dependency (~13.0.1) to mobile package.json
-- Fixed usageCount aggregation (replaced aggregateMany with findMany + Map due to type error)
-- Type-check verified for category-related code: packages/types ✅, packages/api ✅, CategoryManager ✅, CategoryGrid ✅
-- Web: Type-check PASS (46 errors unrelated to categories)
-- Mobile: Type-check PASS (2 minor expo-haptics type errors unrelated to usageCount functionality)
-- Updated CHANGELOG.md with complete Category Management System entry
-- Updated .opencode/AGENTS.md — Added Phase 3.2 to Completed Phases table
-- Updated .opencode/DECISION_LOG.md — Add decision for Category Management System implementation
+- Created 5 budget management files (web):
+  - budget list page (page.tsx) with expense filter (frequent items first)
+  - budget detail page ([id]/page.tsx) showing type/period/category/amount/dates/spent/remaining/percentage
+  - BudgetCard component (shared across pages for summary display)
+  - BudgetForm component (create/edit with type/period/amount/category/name)
+  - BudgetOverview component showing totalBudget and totalSpent
+- Added BudgetItem.spent field to Prisma schema (Int, default 0) and TypeScript interface
+- Implemented budget.getById procedure
+- Created usedBudgetItems utility for period filtering (SQL queries for startDate/endDate matching)
+- Created spent calculation for budget spent and overview via transaction queries
+- Added BudgetPeriod enum (WEEKLY, MONTHLY) for time-bound budgets
+- Budget validation: period start/end must match budgetType (monthly budgets must have startDate/month + endDate/month)
+- Budget category selection required (cannot create budget without category)
+- Budget form supports custom budget names (in addition to category-based default names)
+- Budget overview card shows formatted amounts, remaining balance and percentage, progress bar
+- Budget detail page shows BudgetItem.spent, remaining, percentage values
+- Budget list page sorts budgets by recent (newest first) + optional category filter
+- Server Component architecture: budget list and budget pages use server-side tRPC caller
+- TypeScript type safety throughout (BudgetItem.interface, Budget.enum, BudgetPeriod.enum, API contracts)
+- Type-check verified for all 9 packages: @finance/ui, @finance/api, @finance/mobile, @finance/types, @finance/web, @finance/db, turbo.json, pnpm-workspace.yaml
+- UI review approved with minor usability issues (non-blocking): additional validation on budget form, progress bar for budget overview card, clearer spent/remaining value display
+- Updated CHANGELOG.md with complete Budget Management System entry
+- Updated .opencode/AGENTS.md — Added Phase 3.1 to Completed Phases table and Current Phase
+- Updated .opencode/DECISION_LOG.md — Add decision for string category matching fragility
 - Git commit: (pending)
 - Git push: (pending)
 
 **Files Created:**
-- `apps/web/components/categories/CategoryManager.tsx`
-- `apps/web/components/categories/CategoryForm.tsx`
-- `apps/web/components/categories/CategoryPicker.tsx`
-- `apps/web/components/categories/IconPicker.tsx`
-- `apps/web/components/categories/ColorPicker.tsx`
-- `apps/web/app/(dashboard)/categories/page.tsx`
-- `apps/mobile/components/categories/CategoryGrid.tsx`
-- `apps/mobile/components/categories/CategoryCard.tsx`
-- `apps/mobile/app/categories.tsx`
+- `apps/web/app/(dashboard)/budgets/page.tsx`
+- `apps/web/app/(dashboard)/budgets/[id]/page.tsx`
+- `apps/web/components/budgets/BudgetCard.tsx`
+- `apps/web/components/budgets/BudgetForm.tsx`
+- `apps/web/components/budgets/BudgetOverview.tsx`
 
 **Files Modified:**
-- `packages/db/prisma/schema.prisma` (Category.usageCount field)
-- `packages/types/src/models.ts` (Category.usageCount field)
-- `packages/api/src/routers/category.ts` (usageCount aggregation in list procedure)
-- `packages/api/src/routers/auth.ts` (seedDefaultCategories utility)
-- `apps/web/app/api/register/route.ts` (Category seeding integration)
-- `apps/mobile/package.json` (expo-haptics dependency)
+- `packages/db/prisma/schema.prisma` (BudgetItem.spent field)
+- `packages/types/src/models.ts` (BudgetItem.interface, Budget.enum, BudgetPeriod.enum)
+- `packages/types/src/api.ts` (budget.list, budget.detail, budget.create, budget.update, budget.delete inputs/outputs, BudgetInput.contract, BudgetDetailOutput.contract, BudgetListInput.contract, BudgetListOutput.contract, BudgetCreateInput.contract, BudgetUpdateInput.contract, BudgetDeleteInput.contract, BudgetOverviewOutput.contract, budget.resetBudgetOutput.contract)
+- `packages/api/src/routers/budget.ts` (getById procedure, usedBudgetItems utility for period filtering, spent calculation for budget spent and overview)
 
 **Key Features:**
-- 19 default expense categories with icons, colors, and descriptions
-- UsageCount aggregation without N+1 queries (efficient findMany + Map approach)
-- Consistent UI patterns across web and mobile (modals, forms, grids, cards)
-- Proper validation (Zod schemas, field constraints, ownership checks)
-- User-friendly UX ("New" badge, confirmation dialogs, singular/plural text)
-- Type-safe implementation throughout (TypeScript interfaces, API contracts)
-- Seamless integration with existing auth and transaction systems
+- Complete budget CRUD operations with proper validation
+- Type-bound budgets (weekly/monthly) with period range enforcement
+- Category selection required for budget creation
+- BudgetItem.spent field for embedded data storage
+- BudgetPeriod enum for time-bound budgets
+- Budget overview stats showing totalBudget and totalSpent
+- Shared BudgetCard component for consistent UI
+- Custom budget names (in addition to category-based defaults)
+- Budget reset functionality for spent recalculation
+- Server-side data fetching for optimal performance
+- Type-safe implementation throughout (TypeScript interfaces, API contracts, enums)
+- SQL queries for budget list and overview (efficient filtering)
+- Minor usability improvements approved (non-blocking)
+
+**Known Issues:**
+- String category matching in budget validation is fragile (TODO for future categoryId relation)
 
 **Next:**
-- Commit and push all Category Management System changes to git
-- Proceed to Phase 3.3 (Budget Management) or next phase per BLUEPRINT.md
+- Commit and push all Budget Management System changes to git
+- Proceed to Phase 3.2 (Stock Management) or next phase per BLUEPRINT.md
