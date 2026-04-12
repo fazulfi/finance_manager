@@ -244,3 +244,34 @@ _(Updated by docs agent after each completed phase)_
 - Clean up monolithic component files (Dialog.tsx, DropdownMenu.tsx, Select.tsx dead exports)
 - Fix @finance/api missing @tanstack/react-query dependency
 - Build first consumer UI components in apps/web using @finance/ui exports
+
+---
+
+## Last Session (2026-04-12) — Phase 2.5 Shared Types Package
+
+**Done:**
+- Created `packages/types/src/enums.ts` — 10 TypeScript enums matching Prisma schema (TransactionType, TransactionStatus, AccountType, Currency, BudgetType, StockType, StockStatus, InvestmentType, SavingsGoalType, DebtType)
+- Created `packages/types/src/models.ts` — 11 interfaces for Prisma models (Account, Transaction, Budget, Stock, Investment, SavingsGoal, Debt, Category, Project, User, BudgetItem)
+- Created `packages/types/src/api.ts` — 46 tRPC procedure input/output types for all 10 routers (auth, accounts, transactions, budgets, stocks, investments, savings-goals, debts, categories, projects) + pagination utilities
+- Created `packages/types/src/forms.ts` — 10 Zod form validation schemas matching API inputs
+- Created `packages/types/src/index.ts` — Barrel exports for all modules
+- Fixed BudgetItemInput type contract — Added missing `spent?: number;` field
+- Installed @typescript-eslint/eslint-plugin as dev dependency for proper linting
+- Updated README.md — Added packages/types section describing structure and exports
+- Updated CHANGELOG.md — Added [Unreleased] entries documenting new package creation
+- Updated AGENTS.md — Added Phase 2.5 to Completed Phases table
+- Updated DECISION_LOG.md — Added decision entry for shared types package
+- TypeScript type-check: PASSED ✅ across all packages
+- Generated 12 files with 946 insertions, 20 deletions
+
+**In progress:**
+- None (phase complete)
+
+**Known issues:**
+- None (phase complete)
+
+**Next:**
+- Phase 2.5 complete — ready to move to Phase 3 per BLUEPRINT.md
+- Clean up monolithic component files (Dialog.tsx, DropdownMenu.tsx, Select.tsx dead exports)
+- Fix @finance/api missing @tanstack/react-query dependency if needed
+- Build first consumer UI components in apps/web using @finance/ui and @finance/types exports
