@@ -1,6 +1,14 @@
-export * from "./components/ui/button";
-export * from "./components/ui/input";
-export * from "./components/ui/label";
-export * from "./components/ui/card";
+// UI Primitives
 export * from "./components/ui";
+
+// Forms
+export * from "./components/forms";
+
+// Layout
+export * from "./components/layout";
+
+// Data Display
+export * from "./components/data-display";
+
+// Utils
 export { cn } from "./lib/utils";

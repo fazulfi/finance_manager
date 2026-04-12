@@ -9,7 +9,7 @@
 **Name:** Personal Finance Manager Pro  
 **Stack:** Turborepo + Next.js 14 (App Router) + Expo React Native + tRPC + Prisma + MongoDB + TypeScript  
 **Blueprint:** See `.opencode/BLUEPRINT.md` for full roadmap (phases 0–6, features per week)  
-**Current Phase:** Phase 2.3 — NextAuth.js authentication ✅ Complete
+**Current Phase:** Phase 2.4 — Shared UI Components ✅ Complete
 
 ---
 
@@ -119,7 +119,7 @@ packages/
 | Step | Name | Owner | Description |
 |------|------|-------|-------------|
 | 1 | Receive Request | Orchestrator | Parse user intent; classify as refactor / build / research / etc. |
-| 2 | PLAN PHASE (when required) + TODO INIT | Planner subagent + Orchestrator | For non-trivial tasks, decompose work into ready-to-delegate steps; trivial tasks may skip planner per `.opencode/agents/planner.md`. In all cases, write `.opencode/TODO.md` as the task template and initialize OpenCode UI todo state (`todowrite`) before execution starts |
+| 2 | PLAN PHASE (when required) + TODO INIT | Planner subagent + Orchestrator | For non-trivial tasks, planner inspects relevant repo/config files, produces a file-ready plan, reviewer approves it, and orchestrator overwrites `.opencode/plans/current-plan.md` with that approved plan verbatim; then `.opencode/TODO.md` is derived from that plan and synced to `todowrite` |
 | 3 | EXECUTION PHASE | Coder / Reviewer / Tester / etc. | Execute steps with per-step status sync in OpenCode UI todo state (`todowrite`) |
 | 4 | RESULT PHASE | Orchestrator | Collect outputs from all subagents; verify acceptance criteria met |
 | 5 | DOCS PHASE | Docs subagent | Update README, CHANGELOG, AGENTS.md, DECISION_LOG; prepare git sync |
@@ -129,13 +129,24 @@ packages/
 
 ### Todo Sync Rules (Step 2 + Step 3)
 
+- `.opencode/plans/current-plan.md` is the approved planning artifact for non-trivial tasks. It is overwritten in full from planner output after review and becomes the planning source of truth for execution briefings.
 - `.opencode/TODO.md` is the task template artifact written once at task init.
 - OpenCode UI todo state (via `todowrite`) is the live runtime task surface.
-- Orchestrator parses all checklist steps in `.opencode/TODO.md` and writes them 1:1 into `todowrite` at init.
+- Orchestrator parses execution steps from the approved plan file, writes them into `.opencode/TODO.md`, and mirrors them 1:1 into `todowrite` at init.
 - UI todo count must equal parsed `TODO.md` step count.
 - Orchestrator updates `todowrite` at every step transition: `pending` -> `in_progress` -> `completed` / `cancelled`.
 - Do not report progress before `todowrite` is updated.
 - `todowrite` payload must use an array of todos with required fields (`content`, `status`, `priority`) and stable per-step ids.
+
+### Planner Discovery Rules
+
+- Planner is allowed to read relevant repository files before producing a plan, including `.env` / `.env.*` when configuration materially affects the task.
+- Planner must never echo raw secret values into the plan artifact. Only variable names, presence/absence, and non-sensitive derived facts may appear.
+- Planner must inspect broadly for non-trivial tasks, not just 1-2 files. Target depth: Simple >= 4 relevant files, Standard >= 8, Complex >= 12, or all relevant files when fewer exist.
+- Discovery should cover critical surfaces when present: implementation, neighboring patterns, exports, config, consumers, types/validation, tests/examples, and env/config.
+- Coverage is task-specific, not count-only. Example: shared UI work must cover root/workspace, target package, web consumer, mobile consumer when relevant, config/Tailwind, and existing usage patterns before the plan is considered valid.
+- The current plan file must be overwritten in full for every new approved plan. Never append to an older plan body.
+- Approved plan files should be Claude-style execution specs: context, evidence reviewed, files to create/modify, implementation order, agent execution steps, key notes, risks, verification.
 
 ### Docs Git Sync Rules (Step 7)
 
@@ -153,7 +164,7 @@ git add -A
 git diff --cached --name-only
 
 # 4. Commit staged session changes
-git commit -m "chore: sync session changes after [brief task description]"
+git commit -m "[type]: sync session changes after [brief task description]"
 
 # 5. Check for unpushed commits
 git log origin/main..HEAD --oneline
@@ -199,43 +210,35 @@ git push origin main
 | Phase 2.2 | tRPC security hardening — fixed 21 IDOR WHERE clauses across 9 routers, added ObjectId format validation, string/array max constraints, transferTo ownership validation, react.tsx client fix, budget spent preservation; type-check PASS ✅ | ✅ Complete | 2026-04-12 |
 | Phase 2.3 | NextAuth.js v5 authentication system — Complete Server Component auth pages, login/signup forms, Google OAuth button, API routes, middleware protection; Create `.env` file with NEXTAUTH_SECRET; Create dashboard page for middleware testing; TypeScript compilation PASS ✅ | ✅ Complete | 2026-04-12 |
 | Phase 2.3 | Authentication component verification — `auth.ts` (JWT strategy, manual upsert), `middleware.ts` (route protection), `LoginForm.tsx`, `SignupForm.tsx`, `GoogleButton.tsx`, `login/page.tsx`, `signup/page.tsx`, `auth/[...nextauth]/route.ts`, `register/route.ts` all verified and unchanged | ✅ Complete | 2026-04-12 |
+| Step 2.4 | Shared UI Components — Fixed all TypeScript compilation issues: 4 barrel files, 20 import paths, TS4023 form context, unused imports; added base component exports (Button, Card, Input, Label); created packages/types and packages/utils stubs; Prisma client generated; type-check PASS ✅ | ✅ Complete | 2026-04-12 |
 
 _(Updated by docs agent after each completed phase)_
 
 ---
 
-## Last Session (2026-04-12)
-
-- Done: Step 2.3 NextAuth.js authentication system — Complete authentication with NextAuth.js v5, JWT strategy, Google OAuth, Credentials provider; Create `.env` file with NEXTAUTH_SECRET; Create dashboard page `apps/web/app/(dashboard)/page.tsx` for middleware testing; Verify all auth components and API routes; TypeScript compilation PASS
-- In progress: None
-- Deferred: Configure Google OAuth credentials (user setup required); Build full dashboard UI; Implement sign out functionality
-- Next: Step 3.x or next phase per BLUEPRINT.md (full dashboard features, user settings, reports)
-
----
-
-## Last Session (2026-04-12) — Authentication System Completion
+## Last Session (2026-04-12) — Step 2.4 UI Component Fixes
 
 **Done:**
-- Complete NextAuth.js v5 authentication implementation with JWT strategy, Google OAuth, and email/password credentials
-- Create `.env` file with generated `NEXTAUTH_SECRET` and all required environment variables
-- Create dashboard page `apps/web/app/(dashboard)/page.tsx` as Server Component for middleware testing
-- Verify all existing authentication files: `auth.ts` (118 lines), `middleware.ts` (30 lines), `LoginForm.tsx` (153 lines), `SignupForm.tsx` (252 lines), `GoogleButton.tsx` (63 lines), `login/page.tsx` (20 lines), `signup/page.tsx` (11 lines), `auth/[...nextauth]/route.ts` (5 lines), `register/route.ts` (57 lines)
-- All dependencies verified installed: `next-auth@5.0.0-beta.25`, `bcryptjs@^2.4.3`, `zod@^3.23.8`, `lucide-react@^0.453.0`
-- TypeScript compilation verified: 0 errors
-- Authentication flow documented: registration → login → dashboard access, middleware protection, Google OAuth flow
+- Fixed 4 broken barrel index.ts files (dialog, dropdown-menu, select, tabs) to re-export from per-component source files
+- Fixed 20 wrong import paths across dialog/, select/, popover/, and layout/ component files
+- Fixed TS4023 — exported FormContextValue interface from forms/Context.tsx
+- Added base component exports (Button, buttonVariants, Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent, Input, Label) to parent barrel
+- Created packages/types/src/index.ts and packages/utils/src/index.ts stub files
+- Deleted temporary packages/ui/src/test-import.ts
+- Generated Prisma client successfully
+- Removed unused imports from SelectValue.tsx and SelectGroup.tsx
+- TypeScript type-check: @finance/ui PASS, @finance/types PASS, @finance/utils PASS, @finance/db PASS
 
 **In progress:**
 - None
 
-**Next:**
-- Configure Google OAuth credentials (user must create project in Google Cloud Console)
-- Test complete authentication flow (register → login → Google OAuth → dashboard)
-- Build full dashboard UI with actual features
-- Implement sign out functionality
+**Known issues:**
+- @finance/api type-check fails (pre-existing: missing @tanstack/react-query dependency)
+- Dialog.tsx, DropdownMenu.tsx, Select.tsx still contain dead code (monolithic exports not used by barrels) — tracked as tech debt for cleanup
+- DialogContent.tsx renders without Portal/Overlay wrapper (unlike Dialog.tsx version) — should be addressed before building dialog UI
 
-**Key Implementation Details:**
-- Manual user upsert in `signIn` callback (NOT using `@auth/prisma-adapter` to avoid accounts collection conflict with finance Account model)
-- JWT session strategy (sessions stored in tokens, not database)
-- Server Component pattern for dashboard page (no "use client" directive)
-- Middleware protection via matcher pattern excluding auth pages and API routes
-- Public registration endpoint with bcrypt password hashing (12 rounds)
+**Next:**
+- Step 2.5 or next phase per BLUEPRINT.md
+- Clean up monolithic component files (Dialog.tsx, DropdownMenu.tsx, Select.tsx dead exports)
+- Fix @finance/api missing @tanstack/react-query dependency
+- Build first consumer UI components in apps/web using @finance/ui exports

@@ -16,8 +16,8 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@finance/tsconfig": "workspace:*",
     "@finance/eslint-config": "workspace:*",
-    "typescript": "^5.6.3"
+    "@finance/tsconfig": "workspace:*",
+    "typescript": "^5.9.3"
   }
 }

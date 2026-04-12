@@ -16,9 +16,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Auth] Verify all existing auth files: `auth.ts`, `middleware.ts`, `LoginForm.tsx`, `SignupForm.tsx`, `GoogleButton.tsx`, `login/page.tsx`, `signup/page.tsx`, `auth/[...nextauth]/route.ts`, `package.json`
 - [API] Verify tRPC API package in `packages/api/` - 10 routers fully implemented (auth, account, transaction, category, project, budget, stock, investment, goal, debt) with Zod validation and Prisma queries (file: `packages/api/src/`)
 - [API] Add `debt` tRPC router with list, detail, create, update, delete, and summary procedures; register it in the root router (file: `packages/api/src/routers/debt.ts`)
+- [UI] Base component exports (Button, Card, Input, Label) to `packages/ui/src/components/ui/index.ts` barrel (file: `packages/ui/src/components/ui/index.ts`)
+- [Infra] Stub `src/index.ts` files for `@finance/types` and `@finance/utils` packages — fixes TS18003 (files: `packages/types/src/index.ts`, `packages/utils/src/index.ts`)
+- [Infra] Generated Prisma client (`pnpm --filter @finance/db prisma generate`)
 
 ### Changed
 
+- [Workflow] Add a single approved plan artifact at `.opencode/plans/current-plan.md`; orchestrator now overwrites it with reviewer-approved planner output verbatim, derives TODO sync from that plan, and keeps execution briefings anchored to the saved plan file (files: `.opencode/agents/planner.md`, `.opencode/agents/orchestrator.md`, `.opencode/AGENTS.md`)
+- [Workflow] Allow planner to read `.env` / `.env.*` when config affects planning, with explicit redaction rules so plan files may mention variable names and non-sensitive findings but never raw secret values (files: `.opencode/agents/planner.md`, `.opencode/AGENTS.md`)
+- [Workflow] Require broader planner discovery for non-trivial tasks and make reviewer reject plans whose evidence is too shallow for the task size; target depth now covers implementation, surrounding patterns, exports, config, consumers, types, tests/examples, and env/config when relevant (files: `.opencode/agents/planner.md`, `.opencode/agents/reviewer.md`, `.opencode/AGENTS.md`)
+- [Workflow] Upgrade planner discovery from count-based depth to task-specific coverage matrices; UI plans now must cover root/workspace, target package, consumer apps, config, and usage patterns, while reviewer rejects plans that miss required surfaces for their task type (files: `.opencode/agents/planner.md`, `.opencode/agents/reviewer.md`, `.opencode/AGENTS.md`)
 - [Workflow] Expand docs-agent git sync from docs-only staging to repo-wide non-ignored staging; it now reviews candidate paths, stages with `git add -A`, checks staged files before commit, and blocks push when likely sensitive files are detected (files: `.opencode/agents/docs.md`, `.opencode/agents/orchestrator.md`, `.opencode/AGENTS.md`)
 - [API] Split `packages/api` exports into a server-safe root entrypoint and a dedicated `@finance/api/react` client subpath (file: `packages/api/src/index.ts`)
 - [API] Generalize `createTRPCContext` session and DB typing so the package can accept injected context without direct `next-auth` or Prisma client type coupling (file: `packages/api/src/trpc.ts`)
@@ -27,6 +34,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- [UI] Fixed 4 broken barrel `index.ts` files in dialog/, dropdown-menu/, select/, tabs/ subdirectories — re-exports now point to correct per-component source files (files: `packages/ui/src/components/ui/dialog/index.ts`, `dropdown-menu/index.ts`, `select/index.ts`, `tabs/index.ts`)
+- [UI] Fixed 20 wrong import paths for `cn()` utility across dialog, select, popover, and layout components (files: `packages/ui/src/components/ui/dialog/`, `select/`, `popover/`, `layout/`)
+- [UI] Fixed TS4023 compilation error — exported `FormContextValue` interface from forms/Context.tsx (file: `packages/ui/src/components/forms/Context.tsx`)
+- [UI] Removed unused imports from SelectValue.tsx and SelectGroup.tsx (files: `packages/ui/src/components/ui/select/SelectValue.tsx`, `SelectGroup.tsx`)
+- [UI] Deleted temporary test file `packages/ui/src/test-import.ts`
 - [API] Keep the root package entrypoint free of client-only React exports so server consumers do not pull in `react.tsx` accidentally (file: `packages/api/src/index.ts`)
 
 ### Security — Step 2.2 tRPC Security Hardening (2026-04-12)

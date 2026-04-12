@@ -1,7 +1,10 @@
 {
   "extends": "@finance/tsconfig/nextjs.json",
   "compilerOptions": {
-    "rootDir": "src"
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
   "exclude": ["node_modules"]
