@@ -33,8 +33,17 @@ Personal finance monorepo with shared web, mobile, API, and database packages.
 
 3. Set package-local environment files:
    - `packages/db/.env` for `DATABASE_URL`
-   - `apps/web/.env.local` from `apps/web/.env.example`
-4. Start the workspace dev pipeline:
+   - `apps/web/.env` for NextAuth and Google OAuth configuration
+4. Configure authentication (optional Google OAuth):
+   - Generate `NEXTAUTH_SECRET`: `openssl rand -base64 32`
+   - Set `NEXTAUTH_URL` to your app URL (e.g., `http://localhost:3000`)
+   - (Optional) Set up Google OAuth credentials:
+     1. Create Google Cloud project: https://console.cloud.google.com/
+     2. Enable Google+ API
+     3. Create OAuth 2.0 credentials with redirect URIs: `http://localhost:3000/api/auth/callback/google`
+     4. Add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to `apps/web/.env`
+5. Start the workspace dev pipeline:
+6. Start the workspace dev pipeline:
 
    ```bash
    pnpm dev

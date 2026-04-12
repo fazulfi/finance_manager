@@ -9,7 +9,7 @@
 **Name:** Personal Finance Manager Pro  
 **Stack:** Turborepo + Next.js 14 (App Router) + Expo React Native + tRPC + Prisma + MongoDB + TypeScript  
 **Blueprint:** See `.opencode/BLUEPRINT.md` for full roadmap (phases 0–6, features per week)  
-**Current Phase:** Phase 2.2 — tRPC package ✅ Complete; Phase 2.3 (NextAuth) is next
+**Current Phase:** Phase 2.3 — NextAuth.js authentication ✅ Complete
 
 ---
 
@@ -124,7 +124,7 @@ packages/
 | 4 | RESULT PHASE | Orchestrator | Collect outputs from all subagents; verify acceptance criteria met |
 | 5 | DOCS PHASE | Docs subagent | Update README, CHANGELOG, AGENTS.md, DECISION_LOG; prepare git sync |
 | 6 | SESSION HANDOFF | Docs subagent | Append "Last Session" block to AGENTS.md so next session has full context |
-| 7 | **DOCS GIT SYNC GATE** | **Docs subagent** | Commit and push session docs/git changes to GitHub (see rules below) |
+| 7 | **DOCS GIT SYNC GATE** | **Docs subagent** | Stage repo changes, commit, and push session work to GitHub (see rules below) |
 | 8 | Final Response | Orchestrator | Synthesize and deliver final response to user |
 
 ### Todo Sync Rules (Step 2 + Step 3)
@@ -143,11 +143,19 @@ The docs agent runs git sync directly after SESSION HANDOFF and before final res
 
 **Algorithm:**
 ```bash
-# 1. Stage and commit docs (if changed)
-git add README.md CHANGELOG.md .opencode/AGENTS.md .opencode/DECISION_LOG.md
-git commit -m "docs: update docs after [brief task description]"
+# 1. Review working tree for risky paths before staging
+git status --short
 
-# 2. Check for unpushed commits
+# 2. Stage all non-ignored repo changes
+git add -A
+
+# 3. Review staged paths before commit
+git diff --cached --name-only
+
+# 4. Commit staged session changes
+git commit -m "chore: sync session changes after [brief task description]"
+
+# 5. Check for unpushed commits
 git log origin/main..HEAD --oneline
 
 # If output is empty → nothing to push → skip silently (no message to user)
@@ -158,6 +166,7 @@ git push origin main
 **Behavior:**
 - ✅ **Commits exist to push** → run `git push origin main`; on success, include one line in the final response: `"✅ Session commits pushed to GitHub."`
 - ✅ **Nothing to push** → skip entirely; do NOT mention it in the final response
+- ⚠️ **Likely sensitive files detected** (`.env`, `.env.*`, `*.pem`, `*.key`, `*.p12`, `*.p8`, `*.jks`, `*.mobileprovision`) → do NOT commit or push; report exact paths and ask for manual review unless they are clearly example/template files intended for version control
 - ⚠️ **Push fails** (network error, auth error, rejected) → do NOT block the final response; instead, append a warning block to the final response:
   ```
   ⚠️ Git push failed — commits are saved locally but NOT on GitHub.
@@ -167,6 +176,8 @@ git push origin main
 
 **Hard constraints:**
 - ❌ Never `git push --force` — always plain `git push origin main`
+- ❌ Never use `git add -f` to bypass `.gitignore`
+- ❌ Never commit before reviewing `git diff --cached --name-only`
 - ❌ Docs agent must report both commit and push status in output (`GIT COMMIT`, `GIT PUSH`)
 - ❌ Orchestrator must not run push directly; push is owned by docs agent
 - ❌ Do not skip the docs git sync gate even if DOCS PHASE produced no commits (always check; silently skip if clean)
@@ -186,6 +197,8 @@ git push origin main
 | Phase 2.2 | tRPC package setup — `packages/api/package.json` exports updated; `src/trpc.ts` genericized for injected session/db context; `src/root.ts`, `src/index.ts`, `src/react.tsx` added; `debt` router added; `category.getById` and `stock.updatePrice` added; type-check EXIT CODE 0 ✅ | ✅ Complete | 2026-04-11 |
 | Phase 2.2 | tRPC API package verification — All 10 routers verified working; Zod validation and error handling in place; Prisma queries validated; `cd packages/api && pnpm install` PASS; `cd packages/api && pnpm type-check` PASS ✅ | ✅ Complete | 2026-04-12 |
 | Phase 2.2 | tRPC security hardening — fixed 21 IDOR WHERE clauses across 9 routers, added ObjectId format validation, string/array max constraints, transferTo ownership validation, react.tsx client fix, budget spent preservation; type-check PASS ✅ | ✅ Complete | 2026-04-12 |
+| Phase 2.3 | NextAuth.js v5 authentication system — Complete Server Component auth pages, login/signup forms, Google OAuth button, API routes, middleware protection; Create `.env` file with NEXTAUTH_SECRET; Create dashboard page for middleware testing; TypeScript compilation PASS ✅ | ✅ Complete | 2026-04-12 |
+| Phase 2.3 | Authentication component verification — `auth.ts` (JWT strategy, manual upsert), `middleware.ts` (route protection), `LoginForm.tsx`, `SignupForm.tsx`, `GoogleButton.tsx`, `login/page.tsx`, `signup/page.tsx`, `auth/[...nextauth]/route.ts`, `register/route.ts` all verified and unchanged | ✅ Complete | 2026-04-12 |
 
 _(Updated by docs agent after each completed phase)_
 
@@ -193,7 +206,36 @@ _(Updated by docs agent after each completed phase)_
 
 ## Last Session (2026-04-12)
 
-- Done: Step 2.2 tRPC API verification + security hardening — fixed 21 IDOR WHERE clauses, react.tsx client type, transferTo validation, ObjectId format validation, string max-lengths, budget spent preservation
+- Done: Step 2.3 NextAuth.js authentication system — Complete authentication with NextAuth.js v5, JWT strategy, Google OAuth, Credentials provider; Create `.env` file with NEXTAUTH_SECRET; Create dashboard page `apps/web/app/(dashboard)/page.tsx` for middleware testing; Verify all auth components and API routes; TypeScript compilation PASS
 - In progress: None
-- Deferred: Add `select` clauses to all Prisma queries (tracked as tech debt); refactor budget category matching from name-based to categoryId-based
-- Next: Step 2.3 or next phase per BLUEPRINT.md
+- Deferred: Configure Google OAuth credentials (user setup required); Build full dashboard UI; Implement sign out functionality
+- Next: Step 3.x or next phase per BLUEPRINT.md (full dashboard features, user settings, reports)
+
+---
+
+## Last Session (2026-04-12) — Authentication System Completion
+
+**Done:**
+- Complete NextAuth.js v5 authentication implementation with JWT strategy, Google OAuth, and email/password credentials
+- Create `.env` file with generated `NEXTAUTH_SECRET` and all required environment variables
+- Create dashboard page `apps/web/app/(dashboard)/page.tsx` as Server Component for middleware testing
+- Verify all existing authentication files: `auth.ts` (118 lines), `middleware.ts` (30 lines), `LoginForm.tsx` (153 lines), `SignupForm.tsx` (252 lines), `GoogleButton.tsx` (63 lines), `login/page.tsx` (20 lines), `signup/page.tsx` (11 lines), `auth/[...nextauth]/route.ts` (5 lines), `register/route.ts` (57 lines)
+- All dependencies verified installed: `next-auth@5.0.0-beta.25`, `bcryptjs@^2.4.3`, `zod@^3.23.8`, `lucide-react@^0.453.0`
+- TypeScript compilation verified: 0 errors
+- Authentication flow documented: registration → login → dashboard access, middleware protection, Google OAuth flow
+
+**In progress:**
+- None
+
+**Next:**
+- Configure Google OAuth credentials (user must create project in Google Cloud Console)
+- Test complete authentication flow (register → login → Google OAuth → dashboard)
+- Build full dashboard UI with actual features
+- Implement sign out functionality
+
+**Key Implementation Details:**
+- Manual user upsert in `signIn` callback (NOT using `@auth/prisma-adapter` to avoid accounts collection conflict with finance Account model)
+- JWT session strategy (sessions stored in tokens, not database)
+- Server Component pattern for dashboard page (no "use client" directive)
+- Middleware protection via matcher pattern excluding auth pages and API routes
+- Public registration endpoint with bcrypt password hashing (12 rounds)

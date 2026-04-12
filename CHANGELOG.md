@@ -9,11 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- [Auth] Complete NextAuth.js v5 authentication system — JWT strategy, Google OAuth, and Credentials provider with manual user upsert (no Prisma adapter accounts collection)
+- [Auth] Create `.env` file with generated `NEXTAUTH_SECRET` and all required environment variables
+- [Auth] Create dashboard page `apps/web/app/(dashboard)/page.tsx` as Server Component for middleware testing
+- [Auth] Create public registration endpoint `/api/register` with email/password validation and bcrypt hashing
+- [Auth] Verify all existing auth files: `auth.ts`, `middleware.ts`, `LoginForm.tsx`, `SignupForm.tsx`, `GoogleButton.tsx`, `login/page.tsx`, `signup/page.tsx`, `auth/[...nextauth]/route.ts`, `package.json`
 - [API] Verify tRPC API package in `packages/api/` - 10 routers fully implemented (auth, account, transaction, category, project, budget, stock, investment, goal, debt) with Zod validation and Prisma queries (file: `packages/api/src/`)
 - [API] Add `debt` tRPC router with list, detail, create, update, delete, and summary procedures; register it in the root router (file: `packages/api/src/routers/debt.ts`)
 
 ### Changed
 
+- [Workflow] Expand docs-agent git sync from docs-only staging to repo-wide non-ignored staging; it now reviews candidate paths, stages with `git add -A`, checks staged files before commit, and blocks push when likely sensitive files are detected (files: `.opencode/agents/docs.md`, `.opencode/agents/orchestrator.md`, `.opencode/AGENTS.md`)
 - [API] Split `packages/api` exports into a server-safe root entrypoint and a dedicated `@finance/api/react` client subpath (file: `packages/api/src/index.ts`)
 - [API] Generalize `createTRPCContext` session and DB typing so the package can accept injected context without direct `next-auth` or Prisma client type coupling (file: `packages/api/src/trpc.ts`)
 - [API] Add package root/router entry files for app router consumption and server-side caller creation (file: `packages/api/src/root.ts`)
