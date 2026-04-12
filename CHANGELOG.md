@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- [Mobile] Create base global CSS styles for mobile app with NativeWind directives, brand color variables, safe-area padding utilities, and custom scrollbar hiding (file: `apps/mobile/app/global.css`)
 - [Accounts] Add end-to-end `Account.description` support across Prisma schema, shared contracts, and account forms/UI (files: `packages/db/prisma/schema.prisma`, `packages/types/src/models.ts`, `packages/types/src/forms.ts`, `apps/web/components/accounts/AccountForm.tsx`)
 - [Accounts] Implement account management web surfaces (list/new/detail/loading) with reusable account components and mutation feedback toasts (files: `apps/web/app/(dashboard)/accounts/page.tsx`, `apps/web/app/(dashboard)/accounts/new/page.tsx`, `apps/web/app/(dashboard)/accounts/[id]/page.tsx`, `apps/web/components/accounts/`)
 - [Accounts] Add atomic `account.transfer` procedure with server-side balance updates and optimistic transfer/delete UX on web (files: `packages/api/src/routers/account.ts`, `apps/web/components/accounts/TransferDialog.tsx`)
