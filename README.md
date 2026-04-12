@@ -56,6 +56,13 @@ Personal finance monorepo with shared web, mobile, API, and database packages.
 - `createTRPCContext` accepts injected `db` and `session` values, so `packages/api` does not depend directly on `next-auth` or app-specific runtime types.
 - Verified for this package: `cd packages/api && pnpm install` and `cd packages/api && pnpm type-check` both pass.
 
+### `packages/types` notes
+
+- Root entrypoint `@finance/types` exports shared TypeScript interfaces, Zod validation schemas, and API types.
+- 5 TypeScript files provide complete type coverage: `enums.ts` (10 Prisma enums), `models.ts` (11 Prisma model interfaces), `api.ts` (46 tRPC procedure input/output types), `forms.ts` (10 Zod form validation schemas), and `index.ts` barrel exports.
+- Enables strict typing across web and mobile apps without direct Prisma dependencies.
+- All form validation schemas use Zod v3.23.8 for runtime input validation.
+
 ## API Endpoints
 
 These are tRPC router domains exposed from `packages/api/src/root.ts`.

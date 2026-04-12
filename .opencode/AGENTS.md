@@ -9,7 +9,7 @@
 **Name:** Personal Finance Manager Pro  
 **Stack:** Turborepo + Next.js 14 (App Router) + Expo React Native + tRPC + Prisma + MongoDB + TypeScript  
 **Blueprint:** See `.opencode/BLUEPRINT.md` for full roadmap (phases 0–6, features per week)  
-**Current Phase:** Phase 2.4 — Shared UI Components ✅ Complete
+**Current Phase:** Phase 2.5 — Shared Types Package ✅ Complete
 
 ---
 
@@ -119,7 +119,7 @@ packages/
 | Step | Name | Owner | Description |
 |------|------|-------|-------------|
 | 1 | Receive Request | Orchestrator | Parse user intent; classify as refactor / build / research / etc. |
-| 2 | PLAN PHASE (when required) + TODO INIT | Planner subagent + Orchestrator | For non-trivial tasks, planner inspects relevant repo/config files, produces a file-ready plan, reviewer approves it, and orchestrator overwrites `.opencode/plans/current-plan.md` with that approved plan verbatim; then `.opencode/TODO.md` is derived from that plan and synced to `todowrite` |
+| 2 | PLAN PHASE (when required) + TODO INIT | Planner subagent + Orchestrator | For non-trivial tasks, planner inspects relevant repo/config files and produces a file-ready plan; orchestrator immediately overwrites `.opencode/plans/current-plan.md` with that planner draft, reviewer reviews the file, and any revisions overwrite the same file again; after approval, `.opencode/TODO.md` is derived from the reviewed current plan and synced to `todowrite` |
 | 3 | EXECUTION PHASE | Coder / Reviewer / Tester / etc. | Execute steps with per-step status sync in OpenCode UI todo state (`todowrite`) |
 | 4 | RESULT PHASE | Orchestrator | Collect outputs from all subagents; verify acceptance criteria met |
 | 5 | DOCS PHASE | Docs subagent | Update README, CHANGELOG, AGENTS.md, DECISION_LOG; prepare git sync |
@@ -129,7 +129,8 @@ packages/
 
 ### Todo Sync Rules (Step 2 + Step 3)
 
-- `.opencode/plans/current-plan.md` is the approved planning artifact for non-trivial tasks. It is overwritten in full from planner output after review and becomes the planning source of truth for execution briefings.
+- `.opencode/plans/current-plan.md` is the current planning artifact for non-trivial tasks. It is overwritten in full from planner output before review and on every revision, then remains the approved source of truth after reviewer approval.
+- During PLAN REVIEW, reviewer should read `.opencode/plans/current-plan.md` as the latest planner draft.
 - `.opencode/TODO.md` is the task template artifact written once at task init.
 - OpenCode UI todo state (via `todowrite`) is the live runtime task surface.
 - Orchestrator parses execution steps from the approved plan file, writes them into `.opencode/TODO.md`, and mirrors them 1:1 into `todowrite` at init.
@@ -145,8 +146,8 @@ packages/
 - Planner must inspect broadly for non-trivial tasks, not just 1-2 files. Target depth: Simple >= 4 relevant files, Standard >= 8, Complex >= 12, or all relevant files when fewer exist.
 - Discovery should cover critical surfaces when present: implementation, neighboring patterns, exports, config, consumers, types/validation, tests/examples, and env/config.
 - Coverage is task-specific, not count-only. Example: shared UI work must cover root/workspace, target package, web consumer, mobile consumer when relevant, config/Tailwind, and existing usage patterns before the plan is considered valid.
-- The current plan file must be overwritten in full for every new approved plan. Never append to an older plan body.
-- Approved plan files should be Claude-style execution specs: context, evidence reviewed, files to create/modify, implementation order, agent execution steps, key notes, risks, verification.
+- The current plan file must be overwritten in full for every new planner draft or revision. Never append to an older plan body.
+- The current plan file should be a Claude-style execution spec: context, evidence reviewed, files to create/modify, implementation order, agent execution steps, key notes, risks, verification.
 
 ### Docs Git Sync Rules (Step 7)
 
@@ -211,6 +212,7 @@ git push origin main
 | Phase 2.3 | NextAuth.js v5 authentication system — Complete Server Component auth pages, login/signup forms, Google OAuth button, API routes, middleware protection; Create `.env` file with NEXTAUTH_SECRET; Create dashboard page for middleware testing; TypeScript compilation PASS ✅ | ✅ Complete | 2026-04-12 |
 | Phase 2.3 | Authentication component verification — `auth.ts` (JWT strategy, manual upsert), `middleware.ts` (route protection), `LoginForm.tsx`, `SignupForm.tsx`, `GoogleButton.tsx`, `login/page.tsx`, `signup/page.tsx`, `auth/[...nextauth]/route.ts`, `register/route.ts` all verified and unchanged | ✅ Complete | 2026-04-12 |
 | Step 2.4 | Shared UI Components — Fixed all TypeScript compilation issues: 4 barrel files, 20 import paths, TS4023 form context, unused imports; added base component exports (Button, Card, Input, Label); created packages/types and packages/utils stubs; Prisma client generated; type-check PASS ✅ | ✅ Complete | 2026-04-12 |
+| Phase 2.5 | Shared Types Package — Create complete @finance/types package with TypeScript interfaces, Zod schemas, and API types; implemented 5 source files (enums.ts, models.ts, api.ts, forms.ts, index.ts); added 10 Prisma enums, 11 model interfaces, 46 tRPC procedure types, 10 form validation schemas; fixed BudgetItemInput contract; installed @typescript-eslint/eslint-plugin; type-check PASS ✅ | ✅ Complete | 2026-04-12 |
 
 _(Updated by docs agent after each completed phase)_
 

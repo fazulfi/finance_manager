@@ -1,4 +1,7 @@
 // @finance/types — Shared TypeScript types & Zod schemas
-// Stub file — types will be added as features are built
+// Re-exports for easy access across monorepo
 
-export {};
+export * from "./enums";
+export * from "./models";
+export * from "./api";
+export * from "./forms";

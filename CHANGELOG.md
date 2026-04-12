@@ -19,13 +19,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [UI] Base component exports (Button, Card, Input, Label) to `packages/ui/src/components/ui/index.ts` barrel (file: `packages/ui/src/components/ui/index.ts`)
 - [Infra] Stub `src/index.ts` files for `@finance/types` and `@finance/utils` packages — fixes TS18003 (files: `packages/types/src/index.ts`, `packages/utils/src/index.ts`)
 - [Infra] Generated Prisma client (`pnpm --filter @finance/db prisma generate`)
+- [Types] Create full @finance/types package with TypeScript interfaces, Zod schemas, and API types (file: `packages/types/`)
+- [Types] Implement `packages/types/src/enums.ts` — 10 TypeScript enums matching Prisma schema (AccountType, TransactionType, CategoryType, ProjectStatus, BudgetType, BudgetPeriod, Exchange, InvestmentType, GoalStatus, DebtType)
+- [Types] Implement `packages/types/src/models.ts` — 11 interfaces for all Prisma models (User, Account, Transaction, Category, Project, Budget, Stock, Investment, SavingsGoal, Debt, BudgetItem)
+- [Types] Implement `packages/types/src/api.ts` — 46 tRPC procedure input/output types covering all routers (auth, account, transaction, category, project, budget, stock, investment, goal, debt)
+- [Types] Implement `packages/types/src/forms.ts` — 10 Zod form validation schemas for client-side input validation
+- [Types] Update `packages/types/src/index.ts` — barrel exports organizing all types by domain (models, enums, api, forms)
+- [Types] Fix BudgetItemInput type contract by adding spent field to match Prisma BudgetItem embedded type (file: `packages/types/src/models.ts`)
+- [Types] Add @typescript-eslint/eslint-plugin as dev dependency for improved TypeScript error reporting in types package (file: `packages/types/package.json`)
 
 ### Changed
 
-- [Workflow] Add a single approved plan artifact at `.opencode/plans/current-plan.md`; orchestrator now overwrites it with reviewer-approved planner output verbatim, derives TODO sync from that plan, and keeps execution briefings anchored to the saved plan file (files: `.opencode/agents/planner.md`, `.opencode/agents/orchestrator.md`, `.opencode/AGENTS.md`)
+- [Workflow] Use a single current plan artifact at `.opencode/plans/current-plan.md`; orchestrator now overwrites it with the latest planner draft verbatim before review and on every revision, reviewer reads that file directly, and the approved file then anchors TODO sync and execution briefings (files: `.opencode/agents/planner.md`, `.opencode/agents/orchestrator.md`, `.opencode/AGENTS.md`)
 - [Workflow] Allow planner to read `.env` / `.env.*` when config affects planning, with explicit redaction rules so plan files may mention variable names and non-sensitive findings but never raw secret values (files: `.opencode/agents/planner.md`, `.opencode/AGENTS.md`)
 - [Workflow] Require broader planner discovery for non-trivial tasks and make reviewer reject plans whose evidence is too shallow for the task size; target depth now covers implementation, surrounding patterns, exports, config, consumers, types, tests/examples, and env/config when relevant (files: `.opencode/agents/planner.md`, `.opencode/agents/reviewer.md`, `.opencode/AGENTS.md`)
 - [Workflow] Upgrade planner discovery from count-based depth to task-specific coverage matrices; UI plans now must cover root/workspace, target package, consumer apps, config, and usage patterns, while reviewer rejects plans that miss required surfaces for their task type (files: `.opencode/agents/planner.md`, `.opencode/agents/reviewer.md`, `.opencode/AGENTS.md`)
+- [Workflow] Simplify planning flow so orchestrator writes `.opencode/plans/current-plan.md` before review; reviewer now reads that file as the latest planner draft, and every planner revision overwrites the same file before the next review pass (files: `.opencode/agents/orchestrator.md`, `.opencode/agents/reviewer.md`, `.opencode/AGENTS.md`)
 - [Workflow] Expand docs-agent git sync from docs-only staging to repo-wide non-ignored staging; it now reviews candidate paths, stages with `git add -A`, checks staged files before commit, and blocks push when likely sensitive files are detected (files: `.opencode/agents/docs.md`, `.opencode/agents/orchestrator.md`, `.opencode/AGENTS.md`)
 - [API] Split `packages/api` exports into a server-safe root entrypoint and a dedicated `@finance/api/react` client subpath (file: `packages/api/src/index.ts`)
 - [API] Generalize `createTRPCContext` session and DB typing so the package can accept injected context without direct `next-auth` or Prisma client type coupling (file: `packages/api/src/trpc.ts`)
