@@ -50,3 +50,44 @@ export const authRouter = router({
       });
     }),
 });
+
+// ── Default Categories Seeder ────────────────────────────────────────────────────
+// Creates 19 default expense categories for new users on signup
+
+const DEFAULT_EXPENSE_CATEGORIES = [
+  { name: "Housing", icon: "🏠", color: "#ef4444" },
+  { name: "Food & Dining", icon: "🍽️", color: "#dc2626" },
+  { name: "Transport", icon: "🚗", color: "#f97316" },
+  { name: "Utilities", icon: "💡", color: "#eab308" },
+  { name: "Healthcare", icon: "🏥", color: "#22c55e" },
+  { name: "Entertainment", icon: "🎮", color: "#06b6d4" },
+  { name: "Education", icon: "📚", color: "#3b82f6" },
+  { name: "Personal Care", icon: "💅", color: "#8b5cf6" },
+  { name: "Insurance", icon: "🛡️", color: "#ec4899" },
+  { name: "Savings", icon: "💰", color: "#10b981" },
+  { name: "Investments", icon: "📈", color: "#14b8a6" },
+  { name: "Gifts", icon: "🎁", color: "#f43f5e" },
+  { name: "Dining Out", icon: "🍕", color: "#f97316" },
+  { name: "Groceries", icon: "🛒", color: "#84cc16" },
+  { name: "Clothing", icon: "👕", color: "#6366f1" },
+  { name: "Transport/Misc", icon: "🚕", color: "#64748b" },
+  { name: "Home Maintenance", icon: "🔧", color: "#d97706" },
+  { name: "Travel", icon: "✈️", color: "#0891b2" },
+  { name: "Other", icon: "📦", color: "#6b7280" },
+];
+
+// @ts-expect-error: Intentionally unused in api package - used by web app
+async function _seedDefaultCategories(db: any, userId: string): Promise<void> {
+  await db.category.createMany({
+    data: DEFAULT_EXPENSE_CATEGORIES.map((cat) => ({
+      userId,
+      name: cat.name,
+      type: "EXPENSE",
+      icon: cat.icon,
+      color: cat.color,
+      isDefault: true,
+      usageCount: 0,
+    })),
+    skipDuplicates: true,
+  });
+}

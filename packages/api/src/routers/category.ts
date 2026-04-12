@@ -24,7 +24,7 @@ export const categoryRouter = router({
         ...(input.type !== undefined && { type: input.type }),
       };
 
-      const [items, total] = await Promise.all([
+      const [categories, total] = await Promise.all([
         ctx.db.category.findMany({
           where,
           skip,
@@ -33,6 +33,32 @@ export const categoryRouter = router({
         }),
         ctx.db.category.count({ where }),
       ]);
+
+      // Get usage count for each category (number of transactions with this category)
+      const transactions = await ctx.db.transaction.findMany({
+        where: {
+          userId,
+          ...(input.type !== undefined && { type: input.type }),
+        },
+        select: { category: true },
+      });
+
+      // Count transactions per category using a Map
+      const usageCountMap = new Map<string, number>();
+      for (const transaction of transactions) {
+        if (transaction.category) {
+          usageCountMap.set(
+            transaction.category,
+            (usageCountMap.get(transaction.category) || 0) + 1,
+          );
+        }
+      }
+
+      // Map usage counts to categories
+      const items = categories.map((category) => ({
+        ...category,
+        usageCount: usageCountMap.get(category.id) || 0,
+      }));
 
       return { items, total, page, limit };
     }),
@@ -63,6 +89,7 @@ export const categoryRouter = router({
         name: input.name,
         type: input.type,
         isDefault: false,
+        usageCount: 0,
       };
       if (input.parent !== undefined) data.parent = input.parent;
       if (input.icon !== undefined) data.icon = input.icon;

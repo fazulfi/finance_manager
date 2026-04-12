@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { db } from "@finance/db";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { seedDefaultCategories } from "@finance/api/routers/auth";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -26,28 +27,36 @@ export async function POST(req: Request): Promise<NextResponse> {
 
     const { email, password, name } = parsed.data;
 
-    const existing = await db.user.findUnique({ where: { email } });
-    if (existing) {
-      return NextResponse.json(
-        { error: "An account with this email already exists" },
-        { status: 409 },
-      );
-    }
-
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const user = await db.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        ...(name != null ? { name } : {}),
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        createdAt: true,
-      },
+    const user = await db.$transaction(async (tx) => {
+      // Use findUniqueOrThrow for atomic duplicate check
+      const existing = await tx.user.findUnique({
+        where: { email },
+      });
+
+      if (existing) {
+        throw new Error("Duplicate email");
+      }
+
+      const newUser = await tx.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          ...(name != null ? { name } : {}),
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          createdAt: true,
+        },
+      });
+
+      // Seed default categories for new user (within same transaction)
+      await seedDefaultCategories(tx, newUser.id);
+
+      return newUser;
     });
 
     return NextResponse.json(user, { status: 201 });

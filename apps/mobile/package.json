@@ -22,6 +22,7 @@
     "@trpc/react-query": "^10.45.2",
     "date-fns": "^3.0.0",
     "expo": "~51.0.28",
+    "expo-haptics": "~13.0.1",
     "expo-router": "~3.5.23",
     "expo-status-bar": "~1.12.1",
     "nativewind": "^4.0.36",

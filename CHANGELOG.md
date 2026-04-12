@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- [Categories] Add complete Category Management System with web and mobile support
+  - Default category seeding (19 expense categories with icons, colors, descriptions)
+  - CRUD operations: create, read, update, delete categories with Zod validation
+  - `usageCount` field tracking number of transactions per category
+  - Category icon and color customization for custom categories
+  - Web CategoryManager with CategoryCard, CategoryForm, CategoryPicker, IconPicker, ColorPicker
+  - Mobile CategoryGrid with CategoryCard showing usageCount badge for active categories
+  - Category API procedures: list (with usageCount aggregation), getById, create, update, delete
+  - Usage stats display: "X transactions" on web, finger-print badge on mobile
+  - "New" badge for categories with 0 transactions (web only)
+  - Delete confirmation dialog with default category protection
+  - Consistent UI across web and mobile platforms (modals, forms, grids)
+  - TypeScript type safety throughout (Category interface with usageCount, API contracts)
+  - Category seeding in auth register flow for new users
+  - Improved UX: optional field validation, ownership checks, default category protection
+  - Files created: `apps/web/components/categories/`, `apps/mobile/components/categories/`, `apps/web/app/(dashboard)/categories/page.tsx`, `apps/mobile/app/categories.tsx`
+  - Files modified: `packages/db/prisma/schema.prisma` (Category.usageCount), `packages/types/src/models.ts` (Category.usageCount), `packages/api/src/routers/category.ts` (usageCount aggregation), `packages/api/src/routers/auth.ts` (seedDefaultCategories utility), `apps/web/app/api/register/route.ts` (seeding integration), `apps/mobile/package.json` (expo-haptics dependency)
+
 - [Mobile] Create base global CSS styles for mobile app with NativeWind directives, brand color variables, safe-area padding utilities, and custom scrollbar hiding (file: `apps/mobile/app/global.css`)
 - [Mobile] Add transaction quick-add components for Expo React Native app
   - `CategoryPicker.tsx` — Icon grid picker with search and animations

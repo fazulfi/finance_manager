@@ -99,6 +99,7 @@ export interface Category {
   icon?: string;
   color?: string;
   isDefault: boolean;
+  usageCount: number;
   createdAt: Date;
   updatedAt: Date;
 
