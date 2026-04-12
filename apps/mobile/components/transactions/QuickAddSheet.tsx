@@ -1,13 +1,9 @@
 // apps/mobile/components/transactions/QuickAddSheet.tsx
 import { Ionicons } from "@expo/vector-icons";
-import { transactionFormSchema } from "@finance/types";
-import { TransactionType } from "@finance/types";
-import { useToast } from "@finance/ui";
+import { transactionFormSchema, TransactionType } from "@finance/types";
 import { cn } from "@finance/utils";
-import { useMutation, useQuery } from "@tanstack/react-query";
 import React, { useState } from "react";
-import { View, Text, Pressable, KeyboardAvoidingView, Platform } from "react-native";
-import { TextInput } from "react-native";
+import { Alert, View, Text, Pressable, KeyboardAvoidingView, Platform, TextInput } from "react-native";
 
 import { api } from "../../utils/trpc";
 
@@ -61,11 +57,11 @@ const CATEGORIES: Category[] = [
 ];
 
 export function QuickAddSheet({ open, onOpenChange, onSuccess }: QuickAddSheetProps) {
-  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form state
   const [accountId, setAccountId] = useState("");
+  const [currency, setCurrency] = useState("IDR");
   const [date, setDate] = useState(new Date());
   const [amount, setAmount] = useState(0);
   const [type, setType] = useState<TransactionType>(TransactionType.EXPENSE);
@@ -80,35 +76,19 @@ export function QuickAddSheet({ open, onOpenChange, onSuccess }: QuickAddSheetPr
   const [recurringRule, setRecurringRule] = useState("");
 
   // Fetch accounts
-  const { data: accountsData } = useQuery({
-    queryKey: ["account", "list"],
-    queryFn: async () => {
-      return await api.account.list({ page: 1, limit: 100, isActive: true } as any);
-    },
-  });
+  const { data: accountsData } = api.account.list.useQuery({ page: 1, limit: 100, isActive: true });
 
   // Create transaction mutation
-  const createTransaction = useMutation({
-    mutationFn: async (data: any) => {
-      return await api.transaction.create(data);
-    },
+  const createTransaction = api.transaction.create.useMutation({
     onSuccess: () => {
-      toast({
-        title: "Transaction created",
-        description: "Your transaction has been added successfully",
-        variant: "default",
-      });
+      Alert.alert("Transaction created", "Your transaction has been added successfully");
       onSuccess?.();
       resetForm();
       onOpenChange(false);
     },
-    onError: (error: any) => {
+    onError: (error) => {
       console.error("Transaction creation error:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create transaction. Please try again.",
-        variant: "destructive",
-      });
+      Alert.alert("Error", error.message || "Failed to create transaction. Please try again.");
     },
   });
 
@@ -147,19 +127,15 @@ export function QuickAddSheet({ open, onOpenChange, onSuccess }: QuickAddSheetPr
       });
 
       if (!validationResult.success) {
-        const errorMessage = validationResult.error.errors[0].message;
-        toast({
-          title: "Validation error",
-          description: errorMessage,
-          variant: "destructive",
-        });
+        const errorMessage = validationResult.error.errors[0]?.message ?? "Validation error";
+        Alert.alert("Validation error", errorMessage);
         return;
       }
 
       setIsSubmitting(true);
 
       // Create transaction
-      await createTransaction.mutateAsync(validationResult.data);
+      await createTransaction.mutateAsync(validationResult.data as any);
     } catch (error) {
       console.error("Form submission error:", error);
     } finally {
@@ -182,9 +158,9 @@ export function QuickAddSheet({ open, onOpenChange, onSuccess }: QuickAddSheetPr
         <View
           className={cn(
             "px-3 py-1 rounded-lg",
-            type === "INCOME"
+            type === TransactionType.INCOME
               ? "bg-emerald-500/20"
-              : type === "EXPENSE"
+              : type === TransactionType.EXPENSE
                 ? "bg-rose-500/20"
                 : "bg-blue-500/20",
           )}
@@ -192,14 +168,14 @@ export function QuickAddSheet({ open, onOpenChange, onSuccess }: QuickAddSheetPr
           <Text
             className={cn(
               "text-sm font-medium",
-              type === "INCOME"
+              type === TransactionType.INCOME
                 ? "text-emerald-500"
-                : type === "EXPENSE"
+                : type === TransactionType.EXPENSE
                   ? "text-rose-500"
                   : "text-blue-500",
             )}
           >
-            {type === "INCOME" ? "Income" : type === "EXPENSE" ? "Expense" : "Transfer"}
+            {type === TransactionType.INCOME ? "Income" : type === TransactionType.EXPENSE ? "Expense" : "Transfer"}
           </Text>
         </View>
       </View>
@@ -216,7 +192,7 @@ export function QuickAddSheet({ open, onOpenChange, onSuccess }: QuickAddSheetPr
 
         {/* Type */}
         <View className="flex-row gap-2 mb-4">
-          {(["INCOME", "EXPENSE", "TRANSFER"] as TransactionType[]).map((t) => (
+          {([TransactionType.INCOME, TransactionType.EXPENSE, TransactionType.TRANSFER]).map((t) => (
             <Pressable
               key={t}
               onPress={() => setType(t)}
@@ -231,7 +207,7 @@ export function QuickAddSheet({ open, onOpenChange, onSuccess }: QuickAddSheetPr
                   type === t ? "text-primary" : "text-foreground",
                 )}
               >
-                {t === "INCOME" ? "Income" : t === "EXPENSE" ? "Expense" : "Transfer"}
+                {t === TransactionType.INCOME ? "Income" : t === TransactionType.EXPENSE ? "Expense" : "Transfer"}
               </Text>
             </Pressable>
           ))}

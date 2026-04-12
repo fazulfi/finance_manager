@@ -73,7 +73,7 @@ export interface Transaction {
   type: TransactionType;
   category: string;
   subcategory?: string;
-  project?: string;
+  project: string | null;
   tags: string[];
   description?: string;
   transferTo?: string; // Optional foreign key (ObjectId) for transfers
@@ -239,5 +239,7 @@ export interface BudgetItem {
   categoryId: string; // Foreign key (ObjectId)
   name: string;
   budgeted: number;
+  totalBudgeted: number; // Embedded field from Prisma schema
+  isProject?: boolean; // Marks if this budget item is for a project
   spent: number;
 }

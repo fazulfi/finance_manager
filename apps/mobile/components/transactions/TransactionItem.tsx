@@ -5,13 +5,12 @@ import { TransactionType } from "@finance/types";
 import { cn } from "@finance/utils";
 import React, { useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import type {
-  GestureState} from "react-native-gesture-handler";
 import {
   Gesture,
   GestureDetector,
-  GestureHandlerRootView
+  GestureHandlerRootView,
 } from "react-native-gesture-handler";
+import type { PanGestureHandlerEventPayload } from "react-native-gesture-handler";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -111,14 +110,14 @@ export function TransactionItem({
     transform: [{ translateX: editTranslate.value }],
   }));
 
-  const handleGestureEvent = (gestureState: GestureState | null) => {
-    if (isDeleting || isEditing || !gestureState) return;
+  const handleGestureUpdate = (event: PanGestureHandlerEventPayload) => {
+    if (isDeleting || isEditing) return;
 
     // Detect swipe direction
-    if (gestureState.translationX < -50) {
+    if (event.translationX < -50) {
       // Swipe left - Show delete button
       translateX.value = withSpring(-120, { damping: 15 });
-    } else if (gestureState.translationX > 50) {
+    } else if (event.translationX > 50) {
       // Swipe right - Show edit button
       translateX.value = withSpring(120, { damping: 15 });
     }
@@ -156,18 +155,11 @@ export function TransactionItem({
   return (
     <GestureHandlerRootView>
       <GestureDetector
-        gesture={Gesture.Pan().onGestureEvent(handleGestureEvent).onEnd(handleEndGesture)}
+        gesture={Gesture.Pan().onUpdate(handleGestureUpdate).onEnd(handleEndGesture)}
       >
         <AnimatedView
-          style={[
-            containerStyle,
-            "border-l-4",
-            "rounded-r-lg",
-            "px-4",
-            "py-3",
-            "shadow-sm",
-            animatedContainerStyle,
-          ].join(" ")}
+          className={cn("border-l-4 rounded-r-lg px-4 py-3 shadow-sm", containerStyle)}
+          style={animatedContainerStyle}
         >
           {/* Delete Button */}
           <AnimatedPressable
@@ -175,11 +167,11 @@ export function TransactionItem({
             accessibilityRole="button"
             onPress={handleDelete}
             hitSlop={10}
-            style={[
+            className={cn(
               "absolute left-0 top-0 bottom-0 w-24 bg-red-500",
-              animatedDeleteStyle,
               isDeleting ? "justify-center" : "items-center",
-            ]}
+            )}
+            style={animatedDeleteStyle}
           >
             {isDeleting ? (
               <AnimatedText className="text-white font-medium text-sm">Delete</AnimatedText>
@@ -194,11 +186,11 @@ export function TransactionItem({
             accessibilityRole="button"
             onPress={handleEdit}
             hitSlop={10}
-            style={[
+            className={cn(
               "absolute right-0 top-0 bottom-0 w-24 bg-blue-500",
-              animatedEditStyle,
               isEditing ? "justify-center" : "items-center",
-            ]}
+            )}
+            style={animatedEditStyle}
           >
             {isEditing ? (
               <AnimatedText className="text-white font-medium text-sm">Edit</AnimatedText>

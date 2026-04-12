@@ -11,6 +11,7 @@ import Animated, {
   withSpring,
   withSequence,
   withTiming,
+  FadeIn,
 } from "react-native-reanimated";
 
 const AnimatedView = Animated.createAnimatedComponent(View);
@@ -114,7 +115,7 @@ export function HomeDashboard({
     <View className={cn("flex-col gap-4", className)}>
       {/* Balance Card */}
       <AnimatedView
-        entering={withTiming(1, { duration: 300 })}
+        entering={FadeIn.duration(300)}
         className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl p-6 shadow-lg"
       >
         <Text className="text-sm text-indigo-200 font-medium">Total Balance</Text>

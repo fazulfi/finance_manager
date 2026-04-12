@@ -2,7 +2,7 @@ export * from "./root.js";
 export * from "./trpc.js";
 export { accountRouter } from "./routers/account.js";
 export { transactionRouter } from "./routers/transaction.js";
-export { authRouter } from "./routers/auth.js";
+export { authRouter, seedDefaultCategories } from "./routers/auth.js";
 export { categoryRouter } from "./routers/category.js";
 export { stockRouter } from "./routers/stock.js";
 export { investmentRouter } from "./routers/investment.js";

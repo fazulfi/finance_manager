@@ -6,20 +6,18 @@ interface TransactionItemProps {
   transaction: {
     id: string;
     accountId: string;
-    account: {
-      id: string;
-      name: string;
-      type: string;
-    };
     date: Date;
     amount: number;
     currency: string;
     type: "INCOME" | "EXPENSE" | "TRANSFER";
     category: string;
-    subcategory?: string;
-    project?: string;
-    tags: string[];
-    description?: string;
+    subcategory?: string | null;
+    project?: string | null;
+    tags?: string[];
+    description?: string | null;
+    account?: {
+      name?: string;
+    } | null;
   };
   variant?: "card" | "row";
   className?: string;
@@ -71,6 +69,11 @@ export function TransactionItem({
   const colorClass = TYPE_COLORS[transaction.type];
   const borderClass = TYPE_BORDER_COLORS[transaction.type];
   const label = TYPE_LABELS[transaction.type];
+  const accountName =
+    typeof transaction.account?.name === "string" && transaction.account.name.length > 0
+      ? transaction.account.name
+      : transaction.accountId;
+  const displayTags = Array.isArray(transaction.tags) ? transaction.tags : [];
 
   if (variant === "card") {
     return (
@@ -119,9 +122,7 @@ export function TransactionItem({
             )}
           </div>
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs text-muted-foreground truncate">
-              {transaction.account.name}
-            </span>
+            <span className="text-xs text-muted-foreground truncate">{accountName}</span>
             {transaction.project && (
               <span className="px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-700 font-medium">
                 {transaction.project}
@@ -145,7 +146,7 @@ export function TransactionItem({
           </p>
         </div>
         <div className="flex flex-col gap-1">
-          {transaction.tags.slice(0, 2).map((tag) => (
+          {displayTags.slice(0, 2).map((tag) => (
             <span key={tag} className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">
               {tag}
             </span>

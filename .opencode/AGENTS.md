@@ -9,7 +9,7 @@
 **Name:** Personal Finance Manager Pro
 **Stack:** Turborepo + Next.js 14 (App Router) + Expo React Native + tRPC + Prisma + MongoDB + TypeScript
 **Blueprint:** See `.opencode/BLUEPRINT.md` for full roadmap (phases 0–6, features per week)
-**Current Phase:** Step 3.2 — Category Management System ✅ Complete
+**Current Phase:** Phase 3.1 — Budget Management System ✅ Complete
 
 ---
 
@@ -64,6 +64,13 @@ packages/
 - All `update` and `delete` WHERE clauses MUST include `userId` (belt-and-suspenders with `findFirst` ownership check) — never pass bare `{ id }` to mutations
 - Rationale: `findFirst` + bare `{ id }` update is vulnerable to TOCTOU race conditions; including `userId` in the WHERE clause makes the mutation itself ownership-scoped
 
+### Project Tagging Conventions (established 2026-04-13)
+
+- `Transaction.project` is a strict project tag: value MUST be a valid Project ObjectId string or `null` (never free-text)
+- Project analytics and progress are derived from user-owned `EXPENSE` transactions tagged with `project`
+- `Project.spent` is a derived/cache field updated via `project.updateProgress` (not a manual source of truth)
+- Project deletion must untag the current user's tagged transactions (`project = null`) before deleting the project record
+
 ### Next.js App Router Conventions
 
 - Default to Server Components — only add `"use client"` when needed (events, hooks, browser APIs)
@@ -114,6 +121,7 @@ packages/
 - ❌ Bare `z.string()` for MongoDB ObjectId inputs — always use `objectId` from `trpc.ts`
 - ❌ Unbounded string/array inputs — always add `.max()` constraints
 - ❌ Allow account transfers between inactive accounts or mismatched currencies
+- ❌ Store free-text project names in `Transaction.project` — only Project ObjectId or `null` is allowed
 
 ---
 
@@ -137,6 +145,8 @@ packages/
 | Phase 2.6 | Shared Utils Package — Create complete @finance/utils package with 5 utility modules (currency, date, number, validation, calculations); implement 4 comprehensive test files with 191 tests total; fix Unicode property escape for robust currency parsing; all utilities fully typed and tested ✅ | ✅ Complete | 2026-04-12 |
 | Step 2.7 | Account Management implementation — `Account.description` support, account router CRUD + atomic `transfer`, account web routes/components, providers + toast + skeleton infra, optimistic transfer/delete UX; type-check PASS for `@finance/types`, `@finance/api`, `@finance/ui`, `@finance/web` | ✅ Complete | 2026-04-12 |
 | Phase 3.2 | Category Management System — 19 default expense categories seeded with icons and colors, Category CRUD operations (list with usageCount, getById, create, update, delete), Category icon/color customization, web CategoryManager with forms/pickers, mobile CategoryGrid with usageCount badges, "New" badge for 0-transaction categories, delete protection for default categories, tRPC category router with usageCount aggregation using findMany + Map, TypeScript type safety (Category.interface usageCount, API contracts), Category seeding in auth register flow, expo-haptics dependency installed; type-check PASS for all category-related code; web/mobile consistency in category UI | ✅ Complete | 2026-04-12 |
+| Step 3.3 | Project/Tag system delivery — project analytics (`project.getAnalytics`) and derived progress updates (`project.updateProgress`), canonical `Transaction.project = ObjectId \| null`, transaction project filters in list/stats, and safe project deletion via pre-delete untagging (`project = null`); verification: type-check PASS for `@finance/ui`, `@finance/api`, `@finance/mobile`, `@finance/types`; `@finance/web` still has unrelated budget type errors; `prisma db push` blocked by local MongoDB connectivity | ✅ Complete | 2026-04-13 |
+| Phase 3.1 | Budget Management System — Budget CRUD operations (create, read, update, delete) with Zod validation, budget type selection (WEEKLY/MONTHLY), period range validation (startDate/endDate must match budgetType), category selection required, budget list page with expense filter (frequent items first), budget detail page with type/period/category/amount/dates/spent/remaining/percentage, budget form supporting type/period/amount/category/name, budget overview card with formatted amounts and progress bar, budgetItem.spent field for embedded data, BudgetPeriod enum (WEEKLY, MONTHLY), budget overview stats showing totalBudget and totalSpent, BudgetCard component used across pages, BudgetForm with custom budget names, budget.resetBudget for spent recalculation via transaction queries, server-side tRPC caller for data fetching, TypeScript type safety throughout, SQL queries for budget list and overview; verification: type-check PASS for all 9 packages; UI review approved with minor usability issues (non-blocking) | ✅ Complete | 2026-04-13 |
 
 _(Updated by docs agent after each completed phase)_
 

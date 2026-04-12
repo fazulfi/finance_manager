@@ -76,8 +76,7 @@ const DEFAULT_EXPENSE_CATEGORIES = [
   { name: "Other", icon: "📦", color: "#6b7280" },
 ];
 
-// @ts-expect-error: Intentionally unused in api package - used by web app
-async function _seedDefaultCategories(db: any, userId: string): Promise<void> {
+export async function seedDefaultCategories(db: any, userId: string): Promise<void> {
   await db.category.createMany({
     data: DEFAULT_EXPENSE_CATEGORIES.map((cat) => ({
       userId,

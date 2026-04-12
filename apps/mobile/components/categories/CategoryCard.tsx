@@ -110,7 +110,7 @@ export function CategoryCard({
     .onEnd(() => {
       if (translateX.value < -80 && onDelete && !isDefault) {
         // Medium feedback for delete action
-        Haptics.impactAsync("medium");
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         runOnJS(onDelete)();
       } else {
         translateX.value = withSpring(0);

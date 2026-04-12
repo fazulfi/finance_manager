@@ -2,11 +2,14 @@
   "extends": "@finance/tsconfig/react-native.json",
   "compilerOptions": {
     "baseUrl": ".",
+    "declaration": false,
+    "declarationMap": false,
     "paths": {
       "@/*": ["./src/*"],
       "@finance/types": ["../../packages/types/src/index.ts"],
       "@finance/utils": ["../../packages/utils/src/index.ts"],
-      "@finance/api": ["../../packages/api/src/index.ts"]
+      "@finance/api": ["../../packages/api/src/index.ts"],
+      "@finance/db": ["../../packages/db/src/index.ts"]
     },
     "types": ["nativewind/types"]
   },

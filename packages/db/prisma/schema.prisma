@@ -58,6 +58,13 @@ enum Exchange {
   OTHER
 }
 
+enum BudgetRolloverPeriod {
+  never
+  monthly
+  quarterly
+  yearly
+}
+
 enum InvestmentType {
   STOCK
   BOND
@@ -90,6 +97,7 @@ type BudgetItem {
   name       String
   budgeted   Float
   spent      Float  @default(0)
+  isProject  Boolean @default(false)
 }
 
 // ─── Models ───────────────────────────────────────────────────────────────────
@@ -149,7 +157,7 @@ model Transaction {
   type          TransactionType
   category      String
   subcategory   String?
-  project       String?
+  project       String?         @db.ObjectId
   tags          String[]
   description   String?
   transferTo    String?         @db.ObjectId
@@ -168,6 +176,7 @@ model Transaction {
   @@index([type])
   @@index([userId, date])
   @@index([userId, type])
+  @@index([userId, project, date])
   @@map("transactions")
 }
 
@@ -222,9 +231,11 @@ model Budget {
   period    BudgetPeriod
   startDate DateTime
   endDate   DateTime?
-  items     BudgetItem[]
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  items            BudgetItem[]
+  rolloverEnabled  Boolean @default(false)
+  rolloverPeriod   BudgetRolloverPeriod @default(never)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   // Relations
   user User @relation(fields: [userId], references: [id])

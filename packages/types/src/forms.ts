@@ -2,6 +2,10 @@
 // These schemas are pure validation rules — no implementation logic
 import { z } from "zod";
 
+// Zod enum counterparts for use in form schemas with .options
+export const transactionTypeEnum = z.enum(["INCOME", "EXPENSE", "TRANSFER"]);
+export const currencyEnum = z.enum(["IDR", "USD", "EUR", "SGD", "JPY", "CNY", "AUD", "CAD"]);
+
 import {
   AccountType,
   CategoryType,
@@ -67,7 +71,11 @@ export const transactionFormSchema = z.object({
   }),
   category: z.string().min(1, "Category is required").max(100, "Category name too long"),
   subcategory: z.string().min(1).max(100).optional(),
-  project: z.string().regex(objectIdRegex, { message: "Invalid project ID format" }).optional(),
+  project: z
+    .string()
+    .regex(objectIdRegex, { message: "Invalid project ID format" })
+    .nullable()
+    .optional(),
   tags: z.array(z.string().max(50)).min(1).max(20).optional(),
   description: z.string().max(500, "Description too long").optional(),
   transferTo: z
@@ -100,7 +108,7 @@ export const categoryFormSchema = z.object({
 export const projectFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(255, "Project name too long"),
   description: z.string().max(1000, "Description too long").optional(),
-  budget: z.coerce.number().min(0, "Budget cannot be negative").optional(),
+  budget: z.coerce.number().positive("Budget must be greater than 0").optional(),
   startDate: z.coerce.date({ message: "Invalid start date format" }).optional(),
   targetDate: z.coerce.date({ message: "Invalid target date format" }).optional(),
   status: z
@@ -130,6 +138,7 @@ export const budgetFormSchema = z.object({
         categoryId: z.string().regex(objectIdRegex, { message: "Invalid category ID format" }),
         name: z.string().min(1, "Item name is required").max(100, "Item name too long"),
         budgeted: z.coerce.number().min(0, "Budgeted amount cannot be negative"),
+        isProject: z.boolean().optional().default(false),
       }),
     )
     .min(1, "At least one budget item is required")

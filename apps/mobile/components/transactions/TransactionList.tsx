@@ -21,7 +21,7 @@ interface TransactionListProps {
   className?: string;
 }
 
-const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList<Transaction>);
 
 export function TransactionList({
   transactions,
@@ -36,7 +36,7 @@ export function TransactionList({
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [syncStatus] = useTransactionSync();
+  const { syncStatus, triggerSync, retrySync } = useTransactionSync();
 
   const [fabY, setFabY] = useState(0);
 
@@ -51,10 +51,10 @@ export function TransactionList({
       return (
         <TransactionItem
           transaction={item}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onSwipeRight={onSwipeRight}
-          onSwipeLeft={onSwipeLeft}
+          {...(onEdit && { onEdit })}
+          {...(onDelete && { onDelete })}
+          {...(onSwipeRight && { onSwipeRight })}
+          {...(onSwipeLeft && { onSwipeLeft })}
         />
       );
     },
@@ -93,10 +93,10 @@ export function TransactionList({
         <View>
           <TransactionItem
             transaction={item}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onSwipeRight={onSwipeRight}
-            onSwipeLeft={onSwipeLeft}
+            {...(onEdit && { onEdit })}
+            {...(onDelete && { onDelete })}
+            {...(onSwipeRight && { onSwipeRight })}
+            {...(onSwipeLeft && { onSwipeLeft })}
           />
         </View>
       );
@@ -109,7 +109,7 @@ export function TransactionList({
       {/* Sync Status Indicator */}
       {syncStatus.pendingCount > 0 && (
         <TouchableOpacity
-          onPress={() => (syncStatus.isOnline ? syncStatus.triggerSync() : syncStatus.retrySync())}
+          onPress={() => (syncStatus.isOnline ? triggerSync() : retrySync())}
           className="flex-row items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 active:bg-amber-100"
         >
           <View className="flex-row items-center gap-2">

@@ -2,10 +2,9 @@
 "use client";
 
 import { useToast } from "@finance/ui";
-import { transactionRouter } from "@finance/api";
+import { api } from "@finance/api/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { TransactionForm } from "./TransactionForm";
+import { TransactionForm, type TransactionFormValues } from "./TransactionForm";
 
 interface QuickAddSheetProps {
   open: boolean;
@@ -15,48 +14,33 @@ interface QuickAddSheetProps {
 export function QuickAddSheet({ open, onOpenChange }: QuickAddSheetProps): React.JSX.Element {
   const router = useRouter();
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmit = async (values: unknown) => {
-    setIsSubmitting(true);
-    try {
-      const api = transactionRouter.createCaller({ headers: new Headers() });
-
-      // Build create input from form values
-      const createInput = {
-        accountId: values.accountId,
-        date: new Date(values.date),
-        amount: parseFloat(values.amount),
-        currency: values.currency || "IDR",
-        type: values.type,
-        category: values.category,
-        subcategory: values.subcategory,
-        project: values.project,
-        tags: values.tags || [],
-        description: values.description,
-        transferTo: values.transferTo,
-        isRecurring: values.isRecurring || false,
-      };
-
-      await api.create(createInput);
-      toast({
-        title: "Transaction created",
-        description: "Your transaction has been added successfully",
-        variant: "default",
-      });
-
+  const createTransaction = api.transaction.create.useMutation({
+    onSuccess: () => {
+      toast({ title: "Transaction created", description: "Transaction added successfully." });
       onOpenChange(false);
       router.refresh();
-    } catch (error) {
-      console.error("Transaction creation error:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create transaction. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleSubmit = async (values: TransactionFormValues) => {
+    await createTransaction.mutateAsync({
+      accountId: values.accountId.value,
+      date: new Date(values.date),
+      amount: values.amount,
+      currency: values.currency,
+      type: values.type,
+      category: values.category,
+      tags: values.tags ?? [],
+      isRecurring: values.isRecurring ?? false,
+      ...(values.subcategory && { subcategory: values.subcategory }),
+      ...(values.project && { project: values.project }),
+      ...(values.description && { description: values.description }),
+      ...(values.transferTo && { transferTo: values.transferTo.value }),
+      ...(values.recurringRule && { recurringRule: values.recurringRule }),
+    } as any);
   };
 
   return (
@@ -64,7 +48,6 @@ export function QuickAddSheet({ open, onOpenChange }: QuickAddSheetProps): React
       open={open}
       onOpenChange={onOpenChange}
       onSubmit={handleSubmit}
-      initialValues={undefined}
       compact={true}
     />
   );

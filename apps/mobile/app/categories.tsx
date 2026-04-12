@@ -3,9 +3,6 @@ import { Suspense } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { api } from "../utils/trpc";
 import { CategoryGrid } from "../components/categories/CategoryGrid";
-import type { TRPCClientError } from "@trpc/client";
-import { CategoryType } from "@finance/types/src/enums";
-
 // Skeleton component for loading state
 function CategoryGridSkeleton() {
   return (
@@ -26,7 +23,7 @@ function CategoryGridSkeleton() {
 function CategoryGridError({
   error,
 }: {
-  error: TRPCClientError<{ category: typeof import("@finance/types").category }>;
+  error: { message?: string };
 }) {
   return (
     <View style={styles.errorContainer}>
@@ -55,7 +52,7 @@ function CategoryGridContent() {
     <View style={styles.container}>
       <View className="flex-col gap-4">
         <CategoryGrid
-          categories={data.items}
+          categories={data.items as any}
           onCategoryPress={(category) => {
             console.log("Category pressed:", category.name);
             // TODO: Navigate to category detail page

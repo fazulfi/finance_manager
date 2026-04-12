@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { db } from "@finance/db";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { seedDefaultCategories } from "@finance/api/routers/auth";
+import { seedDefaultCategories } from "@finance/api";
 
 const registerSchema = z.object({
   email: z.string().email(),

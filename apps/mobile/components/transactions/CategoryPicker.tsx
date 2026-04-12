@@ -55,19 +55,6 @@ const COLORS: Record<string, string> = {
   Transfer: "#64748b",
 };
 
-const COLORS: Record<string, string> = {
-  Home: "#3b82f6",
-  Food: "#f59e0b",
-  Transport: "#6366f1",
-  Shopping: "#ec4899",
-  Entertainment: "#8b5cf6",
-  Health: "#ef4444",
-  Bills: "#06b6d4",
-  Salary: "#10b981",
-  Investment: "#14b8a6",
-  Transfer: "#64748b",
-};
-
 export function CategoryPicker({
   categories,
   selectedCategory,
@@ -102,7 +89,7 @@ export function CategoryPicker({
     transform: [{ scale: scale.value }],
   }));
 
-  const CategoryIcon = ICONS[selectedIcon] || "grid";
+  const CategoryIcon = ICONS[selectedIcon as keyof typeof ICONS] ?? "grid";
 
   const renderItem = ({ item }: { item: Category }) => {
     const isSelected = selectedCategory?.id === item.id;
@@ -119,15 +106,17 @@ export function CategoryPicker({
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
           onPress={() => handlePress(item)}
-          className="w-20 h-20 rounded-2xl bg-card border-2 items-center justify-center"
-          style={[isSelected ? "border-primary bg-primary/10" : "border-transparent"]}
+          className={cn(
+            "w-20 h-20 rounded-2xl bg-card border-2 items-center justify-center",
+            isSelected ? "border-primary bg-primary/10" : "border-transparent",
+          )}
         >
           <Animated.View
-            className="rounded-full p-3"
-            style={[isSelected ? "bg-primary/20" : "bg-muted", animatedStyle]}
+            className={cn("rounded-full p-3", isSelected ? "bg-primary/20" : "bg-muted")}
+            style={animatedStyle}
           >
             <Ionicons
-              name={ICONS[item.icon] as keyof typeof Ionicons}
+              name={(ICONS[item.icon as keyof typeof ICONS] ?? "grid") as any}
               size={24}
               color={isSelected ? "#fff" : COLORS[item.icon]}
             />

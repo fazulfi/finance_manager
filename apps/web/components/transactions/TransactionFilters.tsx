@@ -57,7 +57,7 @@ export function TransactionFilters({
             type="text"
             placeholder="Category or description..."
             value={filters.search ?? ""}
-            onChange={(e) => onFilterChange({ search: e.target.value || undefined })}
+            onChange={(e) => onFilterChange(e.target.value ? { search: e.target.value } : {})}
             disabled={disabled}
             className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           />
@@ -73,7 +73,7 @@ export function TransactionFilters({
               type="date"
               value={filters.dateFrom ? filters.dateFrom.toISOString().split("T")[0] : ""}
               onChange={(e) =>
-                onFilterChange({ dateFrom: e.target.value ? new Date(e.target.value) : undefined })
+                onFilterChange(e.target.value ? { dateFrom: new Date(e.target.value) } : {})
               }
               disabled={disabled}
               className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -82,7 +82,7 @@ export function TransactionFilters({
               type="date"
               value={filters.dateTo ? filters.dateTo.toISOString().split("T")[0] : ""}
               onChange={(e) =>
-                onFilterChange({ dateTo: e.target.value ? new Date(e.target.value) : undefined })
+                onFilterChange(e.target.value ? { dateTo: new Date(e.target.value) } : {})
               }
               disabled={disabled}
               className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -103,9 +103,7 @@ export function TransactionFilters({
               min="0"
               value={filters.amountMin ?? ""}
               onChange={(e) =>
-                onFilterChange({
-                  amountMin: e.target.value ? parseFloat(e.target.value) : undefined,
-                })
+                onFilterChange(e.target.value ? { amountMin: parseFloat(e.target.value) } : {})
               }
               disabled={disabled}
               className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -117,9 +115,7 @@ export function TransactionFilters({
               min="0"
               value={filters.amountMax ?? ""}
               onChange={(e) =>
-                onFilterChange({
-                  amountMax: e.target.value ? parseFloat(e.target.value) : undefined,
-                })
+                onFilterChange(e.target.value ? { amountMax: parseFloat(e.target.value) } : {})
               }
               disabled={disabled}
               className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"

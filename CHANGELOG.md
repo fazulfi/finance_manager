@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- [Projects] Add `project.getAnalytics` procedure returning spend, burn rate, ETA, and risk/timeline indicators for user-owned projects (file: `packages/api/src/routers/project.ts`)
+- [Transactions] Add project-tag filtering support in `transaction.list` and project ownership validation in create/update flows (file: `packages/api/src/routers/transaction.ts`)
+
 - [Categories] Add complete Category Management System with web and mobile support
   - Default category seeding (19 expense categories with icons, colors, descriptions)
   - CRUD operations: create, read, update, delete categories with Zod validation
@@ -26,6 +29,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Improved UX: optional field validation, ownership checks, default category protection
   - Files created: `apps/web/components/categories/`, `apps/mobile/components/categories/`, `apps/web/app/(dashboard)/categories/page.tsx`, `apps/mobile/app/categories.tsx`
   - Files modified: `packages/db/prisma/schema.prisma` (Category.usageCount), `packages/types/src/models.ts` (Category.usageCount), `packages/api/src/routers/category.ts` (usageCount aggregation), `packages/api/src/routers/auth.ts` (seedDefaultCategories utility), `apps/web/app/api/register/route.ts` (seeding integration), `apps/mobile/package.json` (expo-haptics dependency)
+
+- [Budgets] Add comprehensive Budget Management System with web and mobile support
+  - Budget CRUD operations: create, read, update, delete budgets with Zod validation
+  - Budget validation: period start/end match (monthly/weekly budgetType), category selection required
+  - Budget list page with simple expense filter (frequent items first)
+  - Budget detail page showing `budget.type`, `budget.period`, `budget.category`, `budget.amount`, `budget.startDate`, `budget.endDate`, `budget.createdAt`, `budget.spent`, `budget.remaining`, `budget.remainingPercentage` values
+  - Budget form: supports type selection (monthly/weekly), period range validation, amount input, category selection, custom budget name
+  - Budget overview card with formatted amounts (USD formatting), remaining balance and percentage, progress bar, reset button (re-calculates spent from transactions)
+  - Budget type/description badges for visual categorization
+  - BudgetItem embedded type for storing monthly/weekly data with `spent` field
+  - Budget overview stat card showing `totalBudget` and `totalSpent` across all budgets
+  - BudgetPeriod enum (WEEKLY, MONTHLY) for time-bound budgets
+  - TypeScript type safety (BudgetItem.interface with spent field, API contracts)
+  - Budget overview card reset functionality (fetches user transactions to recalculate spent)
+  - Shared BudgetCard component used across pages (summary display)
+  - SQL queries for budget list: user + category filter + type filter + pagination + sort by recent
+  - SQL queries for budget overview: total budgets + total spent across all budgets
+  - Clean JSX with consistent styling (cards, badges, buttons)
+  - Server Component architecture: budget list and budget pages use server-side tRPC caller
+  - Files created: `apps/web/app/(dashboard)/budgets/page.tsx`, `apps/web/app/(dashboard)/budgets/[id]/page.tsx`, `apps/web/components/budgets/BudgetCard.tsx`, `apps/web/components/budgets/BudgetForm.tsx`, `apps/web/components/budgets/BudgetOverview.tsx`
+  - Files modified: `packages/db/prisma/schema.prisma` (BudgetItem.spent field), `packages/types/src/models.ts` (BudgetItem.interface, Budget.enum, BudgetPeriod.enum), `packages/types/src/api.ts` (budget.list, budget.detail, budget.create, budget.update, budget.delete inputs/outputs, BudgetInput.contract, BudgetDetailOutput.contract, BudgetListInput.contract, BudgetListOutput.contract, BudgetCreateInput.contract, BudgetUpdateInput.contract, BudgetDeleteInput.contract, BudgetOverviewOutput.contract, budget.resetBudgetOutput.contract), `packages/api/src/routers/budget.ts` (getById procedure, usedBudgetItems utility for period filtering, spent calculation for budget spent and overview)
 
 - [Mobile] Create base global CSS styles for mobile app with NativeWind directives, brand color variables, safe-area padding utilities, and custom scrollbar hiding (file: `apps/mobile/app/global.css`)
 - [Mobile] Add transaction quick-add components for Expo React Native app
@@ -102,6 +126,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- [Projects] Define canonical `Transaction.project` semantics as `ObjectId | null` project tag (no free-text project names) across API contracts and forms (files: `packages/types/src/api.ts`, `packages/types/src/forms.ts`, `packages/types/src/models.ts`)
+- [Projects] Recompute `Project.spent` from tagged `EXPENSE` transactions via `project.updateProgress` (derived/cache field, not manual source of truth) (file: `packages/api/src/routers/project.ts`)
+- [DB] Add compound transaction index `@@index([userId, project, date])` to improve project analytics/filter query performance (file: `packages/db/prisma/schema.prisma`)
+- [Verification] Confirm type-check passes for `@finance/ui`, `@finance/api`, `@finance/mobile`, and `@finance/types`; `@finance/web` still has unrelated budget type errors, and `prisma db push` remains blocked by local MongoDB connectivity (file: `.opencode/plans/current-plan.md`)
+
 - [Web] Add `extensionAlias` mapping in Next.js config so `.js` imports resolve to workspace TypeScript sources during local build/type-check flows (file: `apps/web/next.config.js`)
 - [Accounts] Enforce transfer policy to reject transfers involving inactive accounts or mismatched currencies (file: `packages/api/src/routers/account.ts`)
 - [Verification] Validate `@finance/types`, `@finance/api`, `@finance/ui`, and `@finance/web` type-check passes; note unresolved environment blockers for web standalone trace symlink (`EPERM` on Windows) and `prisma db push` without local MongoDB (files: `apps/web/next.config.js`, `packages/db/prisma/schema.prisma`)
@@ -121,6 +150,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [API] Add `category.getById` and `stock.updatePrice` procedures for package consumers (file: `packages/api/src/routers/category.ts`)
 
 ### Fixed
+
+- [Projects] Untag user-owned transactions (`project = null`) before deleting a project to prevent dangling project references (file: `packages/api/src/routers/project.ts`)
 
 - [UI] Fix `DropdownMenuTrigger` typing with explicit render branches to satisfy strict TypeScript checks in account menu usage (file: `packages/ui/src/components/ui/dropdown-menu/DropdownMenuTrigger.tsx`)
 - [UI] Fixed 4 broken barrel `index.ts` files in dialog/, dropdown-menu/, select/, tabs/ subdirectories — re-exports now point to correct per-component source files (files: `packages/ui/src/components/ui/dialog/index.ts`, `dropdown-menu/index.ts`, `select/index.ts`, `tabs/index.ts`)

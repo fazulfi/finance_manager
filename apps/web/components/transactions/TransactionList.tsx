@@ -4,13 +4,27 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Skeleton } from "@finance/ui";
-import { transactionRouter } from "@finance/api";
+import { api } from "@finance/api/react";
 import { TransactionItem } from "./TransactionItem";
 import { Button } from "@finance/ui";
 import { ArrowDown } from "lucide-react";
 
+type Transaction = {
+  id: string;
+  date: Date;
+  amount: number;
+  currency: string;
+  type: "INCOME" | "EXPENSE" | "TRANSFER";
+  category: string;
+  subcategory?: string | null;
+  project?: string | null;
+  description?: string | null;
+  accountId: string;
+  tags?: string[];
+};
+
 interface TransactionListServerProps {
-  transactions: Awaited<ReturnType<ReturnType<(typeof transactionRouter)["createCaller"]>["list"]>>;
+  transactions: Transaction[];
   total: number;
   page: number;
   limit: number;
@@ -28,17 +42,19 @@ export function TransactionListServer({
   const [error, setError] = useState<Error | null>(null);
   const [pageCount, setPageCount] = useState(Math.ceil(total / limit));
 
+  const loadMoreQuery = api.transaction.list.useQuery(
+    { page: page + 1, limit },
+    { enabled: false },
+  );
+
   const handleLoadMore = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const api = transactionRouter.createCaller({ headers: new Headers() });
-      const result = await api.list({ page: page + 1, limit });
-      setPageCount(Math.ceil(result.total / limit));
-      return result;
+      const result = await loadMoreQuery.refetch();
+      if (result.data) setPageCount(Math.ceil(result.data.total / limit));
     } catch (err) {
       setError(err as Error);
-      return null;
     } finally {
       setIsLoading(false);
     }
@@ -112,26 +128,34 @@ export function TransactionListClient({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const parentRef = useRef<HTMLDivElement>(null);
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>(
+    serverTransactions?.transactions || [],
+  );
+  const [page, setPage] = useState(serverTransactions?.page || 1);
+  const [limit] = useState(20);
+  const [totalPages, setTotalPages] = useState(Math.ceil((serverTransactions?.total || 0) / limit));
+
+  const loadMoreQuery = api.transaction.list.useQuery(
+    { page: page + 1, limit },
+    { enabled: false },
+  );
+
   const rowVirtualizer = useVirtualizer({
-    count: serverTransactions?.items.length || 0,
+    count: allTransactions.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 80,
     overscan: 10,
   });
 
-  const [allTransactions, setAllTransactions] = useState(serverTransactions?.items || []);
-  const [page, setPage] = useState(serverTransactions?.page || 1);
-  const [limit] = useState(20);
-  const [totalPages, setTotalPages] = useState(Math.ceil((serverTransactions?.total || 0) / limit));
-
   const handleLoadMore = async () => {
     setIsLoadingMore(true);
     try {
-      const api = transactionRouter.createCaller({ headers: new Headers() });
-      const result = await api.list({ page: page + 1, limit });
-      setAllTransactions((prev) => [...prev, ...result.items]);
-      setPage((prev) => prev + 1);
-      setTotalPages(Math.ceil(result.total / limit));
+      const result = await loadMoreQuery.refetch();
+      if (result.data) {
+        setAllTransactions((prev) => [...prev, ...result.data.items]);
+        setPage((prev) => prev + 1);
+        setTotalPages(Math.ceil(result.data.total / limit));
+      }
     } catch (err) {
       console.error("Failed to load more transactions:", err);
     } finally {
@@ -139,7 +163,7 @@ export function TransactionListClient({
     }
   };
 
-  const { virtualItems } = rowVirtualizer;
+  const virtualItems = rowVirtualizer.getVirtualItems();
 
   const itemsToRender = useMemo(() => {
     return virtualItems.map((virtualRow) => {
@@ -151,7 +175,6 @@ export function TransactionListClient({
       return (
         <div
           key={transaction.id}
-          ref={rowVirtualizer.getVirtualElement(index)}
           style={{
             position: "absolute",
             top: 0,

@@ -129,8 +129,7 @@ export function DatePicker({
           accessibilityRole="button"
           onPress={() => handleMonthChange("prev")}
           disabled={minDate !== undefined && viewMonth <= minDate}
-          className="p-2 rounded-lg"
-          style={minDate !== undefined && viewMonth <= minDate ? "opacity-30" : "active:opacity-70"}
+          className={cn("p-2 rounded-lg", minDate !== undefined && viewMonth <= minDate ? "opacity-30" : "active:opacity-70")}
         >
           <Ionicons name="chevron-back" size={24} color="#64748b" />
         </Pressable>
@@ -146,8 +145,7 @@ export function DatePicker({
           accessibilityRole="button"
           onPress={() => handleMonthChange("next")}
           disabled={maxDate !== undefined && viewMonth >= maxDate}
-          className="p-2 rounded-lg"
-          style={maxDate !== undefined && viewMonth >= maxDate ? "opacity-30" : "active:opacity-70"}
+          className={cn("p-2 rounded-lg", maxDate !== undefined && viewMonth >= maxDate ? "opacity-30" : "active:opacity-70")}
         >
           <Ionicons name="chevron-forward" size={24} color="#64748b" />
         </Pressable>
@@ -174,19 +172,19 @@ export function DatePicker({
             accessibilityRole="button"
             onPress={() => handleDayPress(day)}
             disabled={isDisabled(day)}
-            className="w-12 h-12 rounded-xl items-center justify-center flex-col"
-            style={[
+            className={cn(
+              "w-12 h-12 rounded-xl items-center justify-center flex-col",
               isDisabled(day) ? "opacity-30" : "active:bg-muted",
               day.isSelected ? "bg-primary active:bg-primary/80" : "bg-card",
               day.isToday && !day.isSelected ? "border-2 border-primary" : "",
-            ]}
+            )}
           >
             <Text
-              className="text-sm font-medium"
-              style={[
+              className={cn(
+                "text-sm font-medium",
                 day.isSelected ? "text-white" : "text-foreground",
                 day.isToday && !day.isSelected ? "text-primary font-bold" : "",
-              ]}
+              )}
             >
               {day.day}
             </Text>

@@ -143,8 +143,8 @@ export const investmentRouter = router({
       select: { type: true, cost: true, currentValue: true, gain: true },
     });
 
-    const totalCost = investments.reduce((sum, inv) => sum + inv.cost, 0);
-    const totalCurrentValue = investments.reduce((sum, inv) => sum + inv.currentValue, 0);
+    const totalCost = investments.reduce((sum: number, inv) => sum + inv.cost, 0);
+    const totalCurrentValue = investments.reduce((sum: number, inv) => sum + inv.currentValue, 0);
     const totalGain = totalCurrentValue - totalCost;
     const totalGainPercent = totalCost > 0 ? (totalGain / totalCost) * 100 : 0;
 

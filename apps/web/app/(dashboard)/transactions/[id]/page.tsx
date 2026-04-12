@@ -1,9 +1,11 @@
-// apps/web/app/(dashboard)/transactions/[id]/page.tsx
+"use client";
+
 import Link from "next/link";
-import { transactionRouter } from "@finance/api";
+import { useRouter } from "next/navigation";
+import { api } from "@finance/api/react";
 import { TransactionForm } from "@/components/transactions/TransactionForm";
-import { Button } from "@finance/ui";
-import { ArrowLeft } from "lucide-react";
+import { Button, Skeleton, toast } from "@finance/ui";
+import { AlertCircle, ArrowLeft } from "lucide-react";
 
 interface TransactionDetailPageProps {
   params: {
@@ -11,39 +13,53 @@ interface TransactionDetailPageProps {
   };
 }
 
-async function getTransaction(id: string) {
-  const api = transactionRouter.createCaller({ headers: new Headers() });
-  return await api.getById({ id });
-}
+type SupportedCurrency = "IDR" | "USD" | "EUR" | "SGD" | "JPY" | "CNY" | "AUD" | "CAD";
 
-export default async function TransactionDetailPage({
+export default function TransactionDetailPage({
   params,
-}: TransactionDetailPageProps): Promise<React.JSX.Element> {
-  const transaction = await getTransaction(params.id);
+}: TransactionDetailPageProps): React.JSX.Element {
+  const router = useRouter();
+  const transactionQuery = api.transaction.getById.useQuery({ id: params.id });
+  const accountsQuery = api.account.list.useQuery({ page: 1, limit: 100 });
 
-  const initialValues = {
-    accountId: {
-      value: transaction.accountId,
-      label: transaction.account.name,
+  const updateTransaction = api.transaction.update.useMutation({
+    onSuccess: () => {
+      toast({ title: "Transaction updated", description: "Changes saved." });
+      router.push("/transactions");
     },
-    date: transaction.date.toISOString(),
-    amount: transaction.amount,
-    currency: transaction.currency,
-    type: transaction.type,
-    category: transaction.category,
-    subcategory: transaction.subcategory,
-    project: transaction.project,
-    tags: transaction.tags,
-    description: transaction.description,
-    transferTo: transaction.transferTo
-      ? {
-          value: transaction.transferTo,
-          label: "",
-        }
-      : undefined,
-    isRecurring: transaction.isRecurring,
-    recurringRule: transaction.recurringRule,
-  };
+    onError: (error) => {
+      toast({
+        title: "Failed to update transaction",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  if (transactionQuery.isLoading || accountsQuery.isLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-9 w-48" />
+        <Skeleton className="h-[540px] w-full" />
+      </div>
+    );
+  }
+
+  if (transactionQuery.isError || !transactionQuery.data) {
+    return (
+      <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-6 text-center">
+        <AlertCircle className="mx-auto mb-3 h-5 w-5 text-destructive" aria-hidden="true" />
+        <p className="text-sm text-destructive">
+          {transactionQuery.error?.message ?? "Transaction not found"}
+        </p>
+      </div>
+    );
+  }
+
+  const transaction = transactionQuery.data;
+  const accountName =
+    accountsQuery.data?.items.find((account) => account.id === transaction.accountId)?.name ??
+    "Selected account";
 
   return (
     <div className="space-y-6">
@@ -55,18 +71,17 @@ export default async function TransactionDetailPage({
         </Link>
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-gray-900">Transaction</h1>
-          <p className="text-sm text-muted-foreground mt-1">View and edit transaction details</p>
+          <p className="mt-1 text-sm text-muted-foreground">View and edit transaction details</p>
         </div>
       </div>
 
       <TransactionForm
         open={true}
-        onOpenChange={() => window.history.back()}
+        onOpenChange={(open) => {
+          if (!open) router.back();
+        }}
         onSubmit={async (values) => {
-          // Update transaction
-          const api = transactionRouter.createCaller({ headers: new Headers() });
-
-          await api.update({
+          await updateTransaction.mutateAsync({
             id: params.id,
             date: new Date(values.date),
             amount: values.amount,
@@ -75,16 +90,38 @@ export default async function TransactionDetailPage({
             category: values.category,
             subcategory: values.subcategory,
             project: values.project,
-            tags: values.tags || [],
+            tags: values.tags ?? [],
             description: values.description,
-            transferTo: values.transferTo?.value || undefined,
+            transferTo: values.transferTo?.value,
             isRecurring: values.isRecurring,
             recurringRule: values.recurringRule,
           });
-
-          window.location.href = "/transactions";
         }}
-        initialValues={initialValues}
+        initialValues={{
+          accountId: {
+            value: transaction.accountId,
+            label: accountName,
+          },
+          date: transaction.date.toISOString(),
+          amount: transaction.amount,
+          currency: transaction.currency as SupportedCurrency,
+          type: transaction.type,
+          category: transaction.category,
+          project: transaction.project,
+          tags: transaction.tags,
+          isRecurring: transaction.isRecurring,
+          ...(transaction.subcategory ? { subcategory: transaction.subcategory } : {}),
+          ...(transaction.description ? { description: transaction.description } : {}),
+          ...(transaction.transferTo
+            ? {
+                transferTo: {
+                  value: transaction.transferTo,
+                  label: transaction.transferTo,
+                },
+              }
+            : {}),
+          ...(transaction.recurringRule ? { recurringRule: transaction.recurringRule } : {}),
+        }}
         compact={false}
       />
     </div>

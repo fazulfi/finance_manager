@@ -11,6 +11,7 @@ Personal finance monorepo with shared web, mobile, API, and database packages.
 - Client-only React helpers isolated behind `@finance/api/react`
 - Debt router plus category and stock procedure coverage for CRUD-style finance flows
 - Account management flow with paginated list/detail/create/update/delete and atomic same-currency transfers
+- Project tagging system (`Transaction.project` = ObjectId-or-null) with project analytics and derived progress updates
 
 ## Tech Stack
 
@@ -92,6 +93,13 @@ These are tRPC router domains exposed from `packages/api/src/root.ts`.
 - `budget.*`
 - `investment.*`
 - `goal.*`
+
+### Project analytics + transaction tagging
+
+- `project.getAnalytics` returns spend, burn rate/day, estimated completion date, timeline days remaining, and risk flags (`isCompleted`, `isOverdue`, `isAtRisk`)
+- `project.updateProgress` recomputes and persists `Project.spent` from tagged `EXPENSE` transactions
+- `transaction.list` supports `project` ObjectId filtering for project-scoped activity/stat queries
+- `transaction.create` / `transaction.update` accept `project` as `ObjectId | null` only (no free-text project values)
 
 ### `account.transfer` contract overview
 

@@ -1,25 +1,32 @@
 // apps/web/app/(dashboard)/transactions/page.tsx
-import { metadata } from "@/app/layout";
-import { transactionRouter } from "@finance/api";
+import type { Metadata } from "next";
+import { transactionRouter, accountRouter, categoryRouter, createTRPCContext } from "@finance/api";
+import { auth } from "@/auth";
+import { db } from "@finance/db";
 import { TransactionListClient } from "@/components/transactions/TransactionList";
 import { TransactionFilters } from "@/components/transactions/TransactionFilters";
 import { QuickAddButton } from "@/components/transactions/QuickAddButton";
 import { QuickAddSheet } from "@/components/transactions/QuickAddSheet";
 import Link from "next/link";
-import { Plus } from "lucide-react";
 
 async function getTransactions(page: number = 1, limit: number = 20) {
-  const api = transactionRouter.createCaller({ headers: new Headers() });
+  const session = await auth();
+  const ctx = createTRPCContext({ session, db });
+  const api = transactionRouter.createCaller(ctx);
   return await api.list({ page, limit });
 }
 
 async function getAccounts() {
-  const api = transactionRouter.createCaller({ headers: new Headers() });
-  return await api.list({ page: 1, limit: 100, type: "EXPENSE" });
+  const session = await auth();
+  const ctx = createTRPCContext({ session, db });
+  const api = accountRouter.createCaller(ctx);
+  return await api.list({ page: 1, limit: 100 });
 }
 
 async function getCategories() {
-  const api = transactionRouter.createCaller({ headers: new Headers() });
+  const session = await auth();
+  const ctx = createTRPCContext({ session, db });
+  const api = categoryRouter.createCaller(ctx);
   return await api.list({ page: 1, limit: 100, type: "EXPENSE" });
 }
 
@@ -48,14 +55,20 @@ export default async function TransactionsPage({
     getCategories(),
   ]);
 
-  const filters = {
-    accountId: accountId ? undefined : undefined,
-    category: category ? undefined : undefined,
-    dateFrom,
-    dateTo,
-    amountMin: undefined,
-    amountMax: undefined,
-    search,
+  const filters: {
+    accountId?: string;
+    category?: string;
+    dateFrom?: Date;
+    dateTo?: Date;
+    amountMin?: number;
+    amountMax?: number;
+    search?: string;
+  } = {
+    ...(accountId && { accountId }),
+    ...(category && { category }),
+    ...(dateFrom && { dateFrom }),
+    ...(dateTo && { dateTo }),
+    ...(search && { search }),
   };
 
   return (
@@ -90,7 +103,7 @@ export default async function TransactionsPage({
 
       <TransactionListClient
         serverData={{
-          transactions: transactions.items,
+          transactions: transactions.items as any,
           total: transactions.total,
           page: transactions.page,
           limit: transactions.limit,
@@ -107,3 +120,4 @@ export const metadata: Metadata = {
   title: "Transactions",
   description: "View and manage your transactions",
 };
+

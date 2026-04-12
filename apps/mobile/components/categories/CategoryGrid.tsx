@@ -104,7 +104,7 @@ export function CategoryGrid({
         onPressOut={handlePressOut}
         onPress={() => {
           // Light feedback for selection
-          Haptics.impactAsync("light");
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           onCategoryPress(item);
         }}
         className="w-36 h-32 rounded-2xl bg-card border border-border shadow-sm"

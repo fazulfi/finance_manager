@@ -3,6 +3,18 @@
  * All functions are side-effect-free and use only arithmetic operations
  */
 
+// Budget status result type
+export interface BudgetStatusResult {
+  status: "under" | "approaching" | "exceeded";
+  percentage: number; // 0-100
+}
+
+// Date range result type
+export interface BudgetDateRange {
+  start: Date;
+  end: Date;
+}
+
 // Local type definitions for types used in calculations
 interface Stock {
   id: string;
@@ -183,4 +195,190 @@ export function investmentGain(investment: { cost: number; currentValue: number 
   const percent = (gain / cost) * 100;
 
   return { gain, percent };
+}
+
+/**
+ * Calculates the overall budget status based on spent amount and budget
+ *
+ * @param spent - Amount already spent (must be >= 0)
+ * @param budget - Total budget amount (must be >= 0)
+ * @returns Object containing budget status and percentage spent (0-100)
+ *
+ * @remarks
+ * Status thresholds:
+ * - "under": 0% to 79% spent (budget is safe)
+ * - "approaching": 80% to 99% spent (budget is nearly used)
+ * - "exceeded": 100%+ spent (budget is exceeded)
+ *
+ * Percentage is capped at 100% for "exceeded" status
+ *
+ * @example
+ * ```typescript
+ * calculateBudgetStatus(300, 1000)
+ * // Returns { status: 'under', percentage: 30 }
+ *
+ * calculateBudgetStatus(800, 1000)
+ * // Returns { status: 'approaching', percentage: 80 }
+ *
+ * calculateBudgetStatus(1500, 1000)
+ * // Returns { status: 'exceeded', percentage: 100 } (capped at 100)
+ *
+ * calculateBudgetStatus(0, 1000)
+ * // Returns { status: 'under', percentage: 0 }
+ *
+ * calculateBudgetStatus(1200, 0)
+ * // Returns { status: 'exceeded', percentage: 100 } (budget is 0)
+ * ```
+ */
+export function calculateBudgetStatus(spent: number, budget: number): BudgetStatusResult {
+  // Handle edge cases
+  if (budget <= 0) {
+    // If budget is 0 or negative, spending exceeds it (or spent is negative)
+    return {
+      status: "exceeded",
+      percentage: Math.min(100, (spent / Math.abs(budget)) * 100),
+    };
+  }
+
+  if (spent < 0) {
+    // Negative spending doesn't make sense for budget status
+    return {
+      status: "under",
+      percentage: 0,
+    };
+  }
+
+  // Calculate percentage spent (capped at 100)
+  const percentage = Math.min(100, (spent / budget) * 100);
+
+  // Determine status based on percentage thresholds
+  if (percentage >= 100) {
+    return {
+      status: "exceeded",
+      percentage: 100, // Cap at 100% for consistency
+    };
+  } else if (percentage >= 80) {
+    return {
+      status: "approaching",
+      percentage: percentage,
+    };
+  } else {
+    return {
+      status: "under",
+      percentage: percentage,
+    };
+  }
+}
+
+/**
+ * Calculates the date range for a budget period
+ *
+ * @param startDate - Starting date of the period (defaults to first day of current month if not provided)
+ * @param period - Budget period type ("week" | "month" | "quarter" | "year" | "custom")
+ * @returns Object containing start and end dates for the period
+ *
+ * @remarks
+ * Returns the full date range for the specified period.
+ * For "custom" period, startDate is required (end is optional — defaults to startDate if not provided).
+ * All dates are returned as JavaScript Date objects in UTC.
+ *
+ * @example
+ * ```typescript
+ * getBudgetDateRange(undefined, 'month')
+ * // Returns { start: <first day of current month>, end: <last day of current month> }
+ *
+ * getBudgetDateRange(new Date('2024-01-15'), 'week')
+ * // Returns start date of that week, end date of that week
+ *
+ * getBudgetDateRange(new Date('2024-01-01'), 'quarter')
+ * // Returns { start: 2024-01-01, end: 2024-03-31 }
+ *
+ * getBudgetDateRange(new Date('2024-01-01'), 'custom')
+ * // Returns { start: 2024-01-01, end: 2024-01-01 } (both to start date if no end provided)
+ * ```
+ */
+export function getBudgetDateRange(startDate?: Date, period: string = "month"): BudgetDateRange {
+  const now = new Date();
+  let start: Date;
+  let end: Date;
+
+  switch (period) {
+    case "week": {
+      // Get start of week (Monday)
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+      const currentDay = now.getDate();
+      const dayOfWeek = now.getDay();
+      const diff = currentDay - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust when day is Sunday
+
+      const weekStart = new Date(currentYear, currentMonth, diff, 0, 0, 0, 0);
+      const weekEnd = new Date(currentYear, currentMonth, diff + 6, 23, 59, 59, 999);
+      return { start: weekStart, end: weekEnd };
+    }
+
+    case "month": {
+      // Use provided startDate or current month
+      start = startDate || new Date(now.getFullYear(), now.getMonth(), 1);
+      end = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    }
+
+    case "quarter": {
+      // Use provided startDate or start of current quarter
+      start = startDate || new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+      const month = start.getMonth();
+      end = new Date(start.getFullYear(), month + 3, 0);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    }
+
+    case "year": {
+      // Use provided startDate or current year
+      start = startDate || new Date(now.getFullYear(), 0, 1);
+      end = new Date(start.getFullYear(), 11, 31);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    }
+
+    case "custom": {
+      // Custom period — use startDate as both start and end if not provided
+      start = startDate || new Date();
+      end = startDate || new Date();
+      return { start, end };
+    }
+
+    default: {
+      // Default to month if invalid period
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    }
+  }
+}
+
+/**
+ * Calculates the remaining budget amount (without capping)
+ *
+ * @param budget - Total budget amount (must be >= 0)
+ * @param spent - Amount already spent (must be >= 0)
+ * @returns Remaining budget (budget - spent), can be negative if spent exceeds budget
+ *
+ * @remarks
+ * Unlike budgetRemaining(), this function does NOT cap at zero.
+ * Returns negative values when spent exceeds budget (over-budget scenario).
+ * Use this for calculations that need to know exact remaining amount, including over-budget scenarios.
+ *
+ * @example
+ * ```typescript
+ * calculateRemaining(1000, 300) // Returns 700
+ * calculateRemaining(500, 500) // Returns 0
+ * calculateRemaining(1000, 1200) // Returns -200 (over budget by 200)
+ * calculateRemaining(1000, 0) // Returns 1000
+ * calculateRemaining(0, 0) // Returns 0
+ * ```
+ */
+export function calculateRemaining(budget: number, spent: number): number {
+  return budget - spent;
 }

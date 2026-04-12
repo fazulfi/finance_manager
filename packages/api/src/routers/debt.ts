@@ -140,14 +140,14 @@ export const debtRouter = router({
       },
     });
 
-    const totalAmount = debts.reduce((sum, debt) => sum + debt.totalAmount, 0);
-    const totalRemaining = debts.reduce((sum, debt) => sum + debt.remaining, 0);
+    const totalAmount = debts.reduce((sum: number, debt) => sum + debt.totalAmount, 0);
+    const totalRemaining = debts.reduce((sum: number, debt) => sum + debt.remaining, 0);
     const totalPaid = totalAmount - totalRemaining;
     const payoffPercent = totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0;
-    const totalMinPayment = debts.reduce((sum, debt) => sum + debt.minPayment, 0);
+    const totalMinPayment = debts.reduce((sum: number, debt) => sum + debt.minPayment, 0);
     const weightedInterestRate =
       totalRemaining > 0
-        ? debts.reduce((sum, debt) => sum + debt.interestRate * debt.remaining, 0) / totalRemaining
+        ? debts.reduce((sum: number, debt) => sum + debt.interestRate * debt.remaining, 0) / totalRemaining
         : 0;
 
     const byType: Record<string, { totalAmount: number; remaining: number; minPayment: number }> =

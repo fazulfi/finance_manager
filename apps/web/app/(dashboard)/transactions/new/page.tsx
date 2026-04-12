@@ -1,5 +1,5 @@
 // apps/web/app/(dashboard)/transactions/new/page.tsx
-import { TransactionForm } from "@/components/transactions/TransactionForm";
+import Link from "next/link";
 import { QuickAddSheet } from "@/components/transactions/QuickAddSheet";
 import { Button } from "@finance/ui";
 import { ArrowLeft } from "lucide-react";

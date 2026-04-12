@@ -132,7 +132,7 @@ export function AmountInput({
         <View className="flex-row items-center bg-muted rounded-xl px-4 py-3">
           <Text className="text-lg font-semibold text-foreground mr-2">{currency}</Text>
           <AnimatedTextInput
-            style={[animatedInputStyle]}
+            style={[animatedInputStyle, { fontFamily: "Inter" }]}
             value={displayValue}
             onChangeText={handleInputChange}
             placeholder="0.00"
@@ -140,7 +140,6 @@ export function AmountInput({
             keyboardType="decimal-pad"
             autoFocus={autoFocus}
             className="flex-1 text-lg font-semibold text-foreground"
-            style={{ fontFamily: "Inter" }}
           />
         </View>
 

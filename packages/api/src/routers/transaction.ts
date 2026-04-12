@@ -15,6 +15,7 @@ export const transactionRouter = router({
         accountId: objectId.optional(),
         type: TransactionTypeEnum.optional(),
         category: objectId.optional(),
+        project: objectId.optional(),
         dateFrom: z.date().optional(),
         dateTo: z.date().optional(),
         amountMin: z.number().positive().optional(),
@@ -37,6 +38,9 @@ export const transactionRouter = router({
       }
       if (input.category !== undefined) {
         where.category = input.category;
+      }
+      if (input.project !== undefined) {
+        where.project = input.project;
       }
       if (input.dateFrom || input.dateTo) {
         (where as { date?: { gte?: Date; lte?: Date } }).date = {};
@@ -94,7 +98,7 @@ export const transactionRouter = router({
         type: TransactionTypeEnum,
         category: z.string().min(1).max(500),
         subcategory: z.string().max(500).optional(),
-        project: z.string().max(500).optional(),
+        project: objectId.nullable().optional(),
         tags: z.array(z.string().max(100)).default([]),
         description: z.string().max(500).optional(),
         transferTo: objectId.optional(),
@@ -149,6 +153,20 @@ export const transactionRouter = router({
         });
       }
 
+      if (input.project !== undefined && input.project !== null) {
+        const project = await ctx.db.project.findFirst({
+          where: { id: input.project, userId: ctx.session.user.id },
+          select: { id: true },
+        });
+
+        if (!project) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Project not found or access denied",
+          });
+        }
+      }
+
       // Validate balance for INCOME/EXPENSE transactions
       if (input.type !== "INCOME" && activeAccount.balance < input.amount) {
         throw new TRPCError({
@@ -187,7 +205,7 @@ export const transactionRouter = router({
         type: TransactionTypeEnum.optional(),
         category: z.string().min(1).max(500).optional(),
         subcategory: z.string().max(500).optional(),
-        project: z.string().max(500).optional(),
+        project: objectId.nullable().optional(),
         tags: z.array(z.string().max(100)).optional(),
         description: z.string().max(500).optional(),
         transferTo: objectId.optional(),
@@ -242,22 +260,13 @@ export const transactionRouter = router({
         }
       }
 
-      // Calculate expected balance after update
-      let expectedBalance = sourceAccount.balance;
-      const amount = input.amount ?? existing.amount;
-
-      // Handle type changes (income ↔ expense)
-      if (existing.type === "EXPENSE" && effectiveType === "INCOME") {
-        expectedBalance += amount; // Reverting expense to income adds to balance
-      } else if (existing.type === "INCOME" && effectiveType === "EXPENSE") {
-        expectedBalance -= amount; // Reverting income to expense deducts from balance
-      }
-      // Handle amount changes (same type)
-      else if (existing.type === effectiveType && effectiveType !== "INCOME") {
-        expectedBalance -= amount; // Expense amount changed (deduct)
-      } else if (existing.type === effectiveType && effectiveType === "INCOME") {
-        expectedBalance += amount; // Income amount changed (add)
-      }
+      const delta = (type: "INCOME" | "EXPENSE" | "TRANSFER", amount: number) =>
+        type === "INCOME" ? amount : -amount;
+      const updatedAmount = input.amount ?? existing.amount;
+      const expectedBalance =
+        sourceAccount.balance -
+        delta(existing.type, existing.amount) +
+        delta(effectiveType, updatedAmount);
 
       // Validate balance after changes
       if (expectedBalance < 0) {
@@ -265,6 +274,20 @@ export const transactionRouter = router({
           code: "BAD_REQUEST",
           message: "Insufficient funds",
         });
+      }
+
+      if (input.project !== undefined && input.project !== null) {
+        const project = await ctx.db.project.findFirst({
+          where: { id: input.project, userId: ctx.session.user.id },
+          select: { id: true },
+        });
+
+        if (!project) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Project not found or access denied",
+          });
+        }
       }
 
       const data: Partial<Parameters<typeof ctx.db.transaction.update>[0]["data"]> = {};
@@ -313,6 +336,7 @@ export const transactionRouter = router({
         dateFrom: z.date(),
         dateTo: z.date(),
         accountId: objectId.optional(),
+        project: objectId.optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -321,6 +345,7 @@ export const transactionRouter = router({
         userId,
         date: { gte: input.dateFrom, lte: input.dateTo },
         ...(input.accountId !== undefined && { accountId: input.accountId }),
+        ...(input.project !== undefined && { project: input.project }),
       };
 
       // MongoDB does not support groupBy — use two separate aggregate calls
@@ -354,7 +379,7 @@ export const transactionRouter = router({
             type: TransactionTypeEnum,
             category: z.string().min(1).max(100),
             subcategory: z.string().max(100).optional(),
-            project: z.string().max(100).optional(),
+            project: objectId.nullable().optional(),
             tags: z.array(z.string()).max(50).optional().default([]),
             description: z.string().max(500).optional(),
             transferTo: objectId.optional(),
@@ -367,22 +392,59 @@ export const transactionRouter = router({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
 
-      // Collect all account IDs for validation
-      const accountIds = new Set<string>();
-      const accounts: Array<{ id: string; balance: number; currency: string }> = [];
+      const projectIds = Array.from(
+        new Set(
+          input
+            .map((item) => item.project)
+            .filter(
+              (projectId): projectId is string => projectId !== undefined && projectId !== null,
+            ),
+        ),
+      );
+
+      if (projectIds.length > 0) {
+        const ownedProjects = await ctx.db.project.findMany({
+          where: {
+            userId,
+            id: { in: projectIds },
+          },
+          select: { id: true },
+        });
+
+        if (ownedProjects.length !== projectIds.length) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "One or more projects not found or access denied",
+          });
+        }
+      }
+
+      // Preload all referenced accounts (source + transfer destination)
+      const referencedAccountIds = Array.from(
+        new Set(
+          input.flatMap((item) =>
+            item.transferTo !== undefined ? [item.accountId, item.transferTo] : [item.accountId],
+          ),
+        ),
+      );
+      const referencedAccounts = await ctx.db.account.findMany({
+        where: {
+          id: { in: referencedAccountIds },
+          userId,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          balance: true,
+          currency: true,
+        },
+      });
+      const accountMap = new Map(referencedAccounts.map((account) => [account.id, account]));
+
       const transactions: any[] = [];
 
       for (const item of input) {
-        accountIds.add(item.accountId);
-
-        // Check if account exists and belongs to user
-        const account = await ctx.db.account.findFirst({
-          where: {
-            id: item.accountId,
-            userId,
-            isActive: true,
-          },
-        });
+        const account = accountMap.get(item.accountId);
 
         if (!account) {
           throw new TRPCError({
@@ -390,12 +452,6 @@ export const transactionRouter = router({
             message: `Account ${item.accountId} not found`,
           });
         }
-
-        accounts.push({
-          id: account.id,
-          balance: account.balance,
-          currency: account.currency,
-        });
 
         // Build transaction data
         const transactionData: Parameters<typeof ctx.db.transaction.create>[0]["data"] = {
@@ -416,8 +472,15 @@ export const transactionRouter = router({
         } as Parameters<typeof ctx.db.transaction.create>[0]["data"];
 
         // Add transfer data if needed
-        if (item.type === "TRANSFER" && item.transferTo) {
-          const targetAccount = accounts.find((a) => a.id === item.transferTo);
+        if (item.type === "TRANSFER") {
+          if (!item.transferTo) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Transfer destination account is required",
+            });
+          }
+
+          const targetAccount = accountMap.get(item.transferTo);
           if (!targetAccount) {
             throw new TRPCError({
               code: "NOT_FOUND",
@@ -453,7 +516,7 @@ export const transactionRouter = router({
       // Check total sufficiency for all accounts
       for (const [accountId, adjustment] of totalAdjustments) {
         if (adjustment < 0) {
-          const account = accounts.find((a) => a.id === accountId);
+          const account = accountMap.get(accountId);
           if (account && account.balance < -adjustment) {
             throw new TRPCError({
               code: "BAD_REQUEST",
@@ -466,7 +529,7 @@ export const transactionRouter = router({
       return ctx.db.$transaction(async (db) => {
         // Process balance updates
         for (const item of input) {
-          const account = accounts.find((a) => a.id === item.accountId);
+          const account = accountMap.get(item.accountId);
           if (!account) continue;
 
           let balanceAdjustment = 0;

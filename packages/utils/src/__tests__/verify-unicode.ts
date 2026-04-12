@@ -8,7 +8,7 @@ console.log("Test string chars:");
 for (let i = 0; i < testString.length; i++) {
   const char = testString[i];
   const code = testString.codePointAt(i);
-  console.log(`  Position ${i}: '${char}' (U+${code.toString(16).padStart(4, "0").toUpperCase()})`);
+  console.log(`  Position ${i}: '${char}' (U+${(code ?? 0).toString(16).padStart(4, "0").toUpperCase()})`);
 }
 
 const matches = testString.match(testRegex);

@@ -97,7 +97,7 @@ export interface CreateTransactionInput {
   type: TransactionType;
   category: string;
   subcategory?: string;
-  project?: string;
+  project?: string | null;
   tags?: string[];
   description?: string;
   transferTo?: string;
@@ -113,7 +113,7 @@ export interface UpdateTransactionInput {
   type?: TransactionType;
   category?: string;
   subcategory?: string;
-  project?: string;
+  project?: string | null;
   tags?: string[];
   description?: string;
   transferTo?: string;
@@ -129,6 +129,7 @@ export interface TransactionListInput extends PageInput {
   accountId?: string;
   type?: TransactionType;
   category?: string;
+  project?: string;
   dateFrom?: Date;
   dateTo?: Date;
   amountMin?: number;
@@ -142,6 +143,7 @@ export interface TransactionStatsInput {
   dateFrom: Date;
   dateTo: Date;
   accountId?: string;
+  project?: string;
 }
 
 export interface TransactionStatsOutput {
@@ -210,6 +212,28 @@ export interface ProjectListInput extends PageInput {
 }
 
 export type ProjectListOutput = PageOutput<Project>;
+
+export interface ProjectAnalyticsInput {
+  id: string;
+}
+
+export interface ProjectAnalyticsOutput {
+  spent: number;
+  budget: number;
+  remaining: number;
+  overspent: number;
+  progressPercent: number;
+  burnRatePerDay: number;
+  estimatedCompletionDate: Date | null;
+  timelineDaysRemaining: number | null;
+  isCompleted: boolean;
+  isOverdue: boolean;
+  isAtRisk: boolean;
+}
+
+export interface UpdateProjectProgressInput {
+  id: string;
+}
 
 /**
  * Budget router types

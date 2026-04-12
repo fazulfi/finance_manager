@@ -1,31 +1,24 @@
 // apps/web/components/transactions/TransactionForm.tsx
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, FormProvider, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { transactionRouter } from "@finance/api";
-import { useToast } from "@finance/ui";
-import { useRouter } from "next/navigation";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@finance/ui";
+import { api } from "@finance/api/react";
+import { FormControl, FormDescription, FormItem, FormLabel, FormMessage } from "@finance/ui";
+const FormField = Controller;
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@finance/ui";
 import { Button } from "@finance/ui";
 import { Input } from "@finance/ui";
 import { Textarea } from "@finance/ui";
-import { Label } from "@finance/ui";
 import { Switch } from "@finance/ui";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@finance/ui";
-import { useState, useEffect } from "react";
-import { Calendar, Tag, Plus, X } from "lucide-react";
-import { transactionTypeEnum, currencyEnum, TransactionType } from "@finance/types";
+import { useState } from "react";
+import { X } from "lucide-react";
+import { transactionTypeEnum, currencyEnum } from "@finance/types";
+import { ProjectPicker } from "@/components/projects/ProjectPicker";
+
+const objectIdRegex = /^[0-9a-fA-F]{24}$/;
 
 // Form validation schema with proper Zod type transformation
 type Currency = "IDR" | "USD" | "EUR" | "SGD" | "JPY" | "CNY" | "AUD" | "CAD";
@@ -41,7 +34,7 @@ const transactionFormSchema = z.object({
   type: transactionTypeEnum,
   category: z.string().min(1),
   subcategory: z.string().max(100).nullable().optional(),
-  project: z.string().max(100).nullable().optional(),
+  project: z.string().regex(objectIdRegex, "Invalid project ID").nullable().optional(),
   tags: z.array(z.string()).default([]),
   description: z.string().max(500).nullable().optional(),
   transferTo: z
@@ -53,9 +46,9 @@ const transactionFormSchema = z.object({
     .optional(),
   isRecurring: z.boolean().default(false),
   recurringRule: z.string().max(200).nullable().optional(),
-} satisfies z.ZodType<TransactionFormValues>);
+});
 
-type TransactionFormValues = {
+export type TransactionFormValues = {
   accountId: { value: string; label: string };
   date: string;
   amount: number;
@@ -63,7 +56,7 @@ type TransactionFormValues = {
   type: "INCOME" | "EXPENSE" | "TRANSFER";
   category: string;
   subcategory?: string;
-  project?: string;
+  project?: string | null;
   tags?: string[];
   description?: string;
   transferTo?: { value: string; label: string };
@@ -86,60 +79,47 @@ export function TransactionForm({
   initialValues,
   compact = false,
 }: TransactionFormProps): React.JSX.Element {
-  const router = useRouter();
-  const { toast } = useToast();
-  const [accounts, setAccounts] = useState<Array<{ id: string; name: string; type: string }>>([]);
-  const [categories, setCategories] = useState<Array<{ id: string; name: string; type: string }>>(
-    [],
-  );
-
-  const isSubmitting = form.formState.isSubmitting;
+  const [tagDraft, setTagDraft] = useState("");
 
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionFormSchema),
     defaultValues: {
-      accountId: initialValues?.accountId,
-      date: initialValues?.date || new Date().toISOString(),
-      amount: initialValues?.amount || 0,
-      currency: initialValues?.currency || "IDR",
-      type: initialValues?.type || "EXPENSE",
-      category: initialValues?.category || "",
-      subcategory: initialValues?.subcategory,
-      project: initialValues?.project,
-      tags: initialValues?.tags || [],
-      description: initialValues?.description,
-      transferTo: initialValues?.transferTo,
-      isRecurring: initialValues?.isRecurring || false,
-      recurringRule: initialValues?.recurringRule,
+      date: initialValues?.date ?? new Date().toISOString(),
+      amount: initialValues?.amount ?? 0,
+      currency: initialValues?.currency ?? "IDR",
+      type: initialValues?.type ?? "EXPENSE",
+      category: initialValues?.category ?? "",
+      tags: initialValues?.tags ?? [],
+      isRecurring: initialValues?.isRecurring ?? false,
+      ...(initialValues?.accountId && { accountId: initialValues.accountId }),
+      ...(initialValues?.subcategory !== undefined && { subcategory: initialValues.subcategory }),
+      ...(initialValues?.project !== undefined && { project: initialValues.project }),
+      ...(initialValues?.description !== undefined && { description: initialValues.description }),
+      ...(initialValues?.transferTo !== undefined && { transferTo: initialValues.transferTo }),
+      ...(initialValues?.recurringRule !== undefined && {
+        recurringRule: initialValues.recurringRule,
+      }),
     },
   });
 
-  useEffect(() => {
-    if (open) {
-      fetchAccounts();
-      fetchCategories();
-    }
-  }, [open]);
+  const isSubmitting = form.formState.isSubmitting;
 
-  async function fetchAccounts() {
-    try {
-      const api = transactionRouter.createCaller({ headers: new Headers() });
-      const result = await api.list({ page: 1, limit: 100, isActive: true });
-      setAccounts(result.items);
-    } catch (error) {
-      console.error("Failed to fetch accounts:", error);
-    }
-  }
+  const selectedType = form.watch("type");
+  const accountsQuery = api.account.list.useQuery(
+    { page: 1, limit: 100, isActive: true },
+    { enabled: open },
+  );
+  const categoriesQuery = api.category.list.useQuery(
+    {
+      page: 1,
+      limit: 100,
+      type: selectedType === "TRANSFER" ? undefined : selectedType,
+    },
+    { enabled: open },
+  );
 
-  async function fetchCategories() {
-    try {
-      const api = transactionRouter.createCaller({ headers: new Headers() });
-      const result = await api.list({ page: 1, limit: 100, type: "EXPENSE" });
-      setCategories(result.items);
-    } catch (error) {
-      console.error("Failed to fetch categories:", error);
-    }
-  }
+  const accounts = accountsQuery.data?.items ?? [];
+  const categories = categoriesQuery.data?.items ?? [];
 
   const handleSubmit = async (values: TransactionFormValues) => {
     try {
@@ -158,7 +138,7 @@ export function TransactionForm({
           <DialogTitle>{initialValues ? "Edit transaction" : "Add transaction"}</DialogTitle>
         </DialogHeader>
 
-        <Form {...form}>
+        <FormProvider {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             {/* Account */}
             <FormField
@@ -289,8 +269,17 @@ export function TransactionForm({
                 <FormItem>
                   <FormLabel>Category</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter category" {...field} />
+                    <Input
+                      list="transaction-category-options"
+                      placeholder="Enter category"
+                      {...field}
+                    />
                   </FormControl>
+                  <datalist id="transaction-category-options">
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.name} />
+                    ))}
+                  </datalist>
                   <FormDescription>
                     Use the auto-complete to select from existing categories
                   </FormDescription>
@@ -319,13 +308,11 @@ export function TransactionForm({
               control={form.control}
               name="project"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Project (optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Home renovation" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+                <ProjectPicker
+                  value={field.value ?? null}
+                  onChange={(nextValue) => field.onChange(nextValue)}
+                  disabled={isSubmitting}
+                />
               )}
             />
 
@@ -340,14 +327,21 @@ export function TransactionForm({
                     <FormControl>
                       <Input
                         placeholder="Add tag and press Enter"
-                        onKeyPress={(e) => {
+                        value={tagDraft}
+                        onChange={(e) => setTagDraft(e.target.value)}
+                        onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             e.preventDefault();
-                            const tags = form.getValues("tags") || [];
-                            if (field.value && !tags.includes(field.value)) {
-                              form.setValue("tags", [...tags, field.value]);
-                              field.onChange("");
+                            const nextTag = tagDraft.trim();
+                            if (!nextTag) {
+                              return;
                             }
+
+                            const tags = field.value ?? [];
+                            if (!tags.includes(nextTag)) {
+                              field.onChange([...tags, nextTag]);
+                            }
+                            setTagDraft("");
                           }
                         }}
                       />
@@ -355,7 +349,10 @@ export function TransactionForm({
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => form.setValue("tags", [])}
+                      onClick={() => {
+                        field.onChange([]);
+                        setTagDraft("");
+                      }}
                     >
                       Clear
                     </Button>
@@ -371,11 +368,8 @@ export function TransactionForm({
                           <button
                             type="button"
                             onClick={() => {
-                              const tags = form.getValues("tags") || [];
-                              form.setValue(
-                                "tags",
-                                tags.filter((_, i) => i !== index),
-                              );
+                              const tags = field.value ?? [];
+                              field.onChange(tags.filter((_, i) => i !== index));
                             }}
                             className="hover:text-blue-900"
                           >
@@ -416,9 +410,9 @@ export function TransactionForm({
                     <Select
                       onValueChange={(value) => {
                         const account = accounts.find((a) => a.id === value);
-                        field.onChange(account ? { value, label: account.name } : undefined);
+                        field.onChange(account ? { value, label: account.name } : null);
                       }}
-                      value={field.value?.value}
+                      value={field.value?.value ?? ""}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -454,7 +448,7 @@ export function TransactionForm({
                     </FormDescription>
                   </div>
                   <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    <Switch checked={field.value ?? false} onCheckedChange={field.onChange} />
                   </FormControl>
                 </FormItem>
               )}
@@ -491,7 +485,7 @@ export function TransactionForm({
               </Button>
             </div>
           </form>
-        </Form>
+        </FormProvider>
       </DialogContent>
     </Dialog>
   );

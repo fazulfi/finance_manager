@@ -49,6 +49,12 @@ export {
 // Separator
 export { Separator } from "./separator/Separator";
 
+// Textarea
+export { Textarea } from "./textarea";
+
+// Switch
+export { Switch } from "./switch";
+
 // Slot
 export { Slot } from "./slot/Slot";
 
