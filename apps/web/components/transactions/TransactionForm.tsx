@@ -16,12 +16,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@finance/ui";
 import { useState } from "react";
 import { X } from "lucide-react";
 import { transactionTypeEnum, currencyEnum } from "@finance/types";
+import { formatCurrency } from "@finance/utils";
 import { ProjectPicker } from "@/components/projects/ProjectPicker";
+import { CurrencySelector } from "./CurrencySelector";
 
 const objectIdRegex = /^[0-9a-fA-F]{24}$/;
-
-// Form validation schema with proper Zod type transformation
-type Currency = "IDR" | "USD" | "EUR" | "SGD" | "JPY" | "CNY" | "AUD" | "CAD";
 
 const transactionFormSchema = z.object({
   accountId: z.object({
@@ -52,7 +51,7 @@ export type TransactionFormValues = {
   accountId: { value: string; label: string };
   date: string;
   amount: number;
-  currency: "IDR" | "USD" | "EUR" | "SGD" | "JPY" | "CNY" | "AUD" | "CAD";
+  currency: "IDR" | "USD" | "EUR" | "SGD" | "JPY";
   type: "INCOME" | "EXPENSE" | "TRANSFER";
   category: string;
   subcategory?: string;
@@ -120,6 +119,28 @@ export function TransactionForm({
 
   const accounts = accountsQuery.data?.items ?? [];
   const categories = categoriesQuery.data?.items ?? [];
+  const selectedAmount = form.watch("amount");
+  const selectedCurrency = form.watch("currency");
+  const selectedDate = form.watch("date");
+  const parsedSelectedDate = selectedDate ? new Date(selectedDate) : undefined;
+  const validSelectedDate =
+    parsedSelectedDate && Number.isFinite(parsedSelectedDate.getTime()) ? parsedSelectedDate : undefined;
+
+  const conversionPreview = api.exchangeRate.convertCurrency.useQuery(
+    {
+      amount: selectedAmount,
+      from: selectedCurrency,
+      to: "IDR",
+      date: validSelectedDate,
+    },
+    {
+      enabled:
+        open &&
+        selectedCurrency !== "IDR" &&
+        Number.isFinite(selectedAmount) &&
+        selectedAmount > 0,
+    },
+  );
 
   const handleSubmit = async (values: TransactionFormValues) => {
     try {
@@ -221,26 +242,32 @@ export function TransactionForm({
               control={form.control}
               name="currency"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Currency</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {currencyEnum.options.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
+                <CurrencySelector value={field.value} onChange={field.onChange} />
               )}
             />
+            {selectedCurrency !== "IDR" && (
+              <div className="rounded-md border border-dashed px-3 py-2 text-sm">
+                {conversionPreview.isLoading && (
+                  <p className="text-muted-foreground">Fetching IDR conversion...</p>
+                )}
+                {conversionPreview.isError && (
+                  <p className="text-rose-600">{conversionPreview.error.message}</p>
+                )}
+                {conversionPreview.data && (
+                  <p className="text-muted-foreground">
+                    {formatCurrency(
+                      conversionPreview.data.amount,
+                      conversionPreview.data.from,
+                      "en-US",
+                    )}{" "}
+                    ≈{" "}
+                    <span className="font-medium text-foreground">
+                      {formatCurrency(conversionPreview.data.convertedAmount, "IDR", "id-ID")}
+                    </span>
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Date */}
             <FormField

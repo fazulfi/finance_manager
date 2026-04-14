@@ -2,6 +2,18 @@
 // Uses Intl.NumberFormat for locale-aware currency operations
 // No external dependencies or side effects
 
+import { CurrencyCode } from "@finance/types";
+
+export const CurrencyFractionDigits: Record<CurrencyCode, 0 | 2> = {
+  [CurrencyCode.IDR]: 0,
+  [CurrencyCode.USD]: 2,
+  [CurrencyCode.EUR]: 2,
+  [CurrencyCode.SGD]: 2,
+  [CurrencyCode.JPY]: 0,
+};
+
+const supportedCurrencyCodes = new Set<CurrencyCode>(Object.values(CurrencyCode));
+
 /**
  * Currency symbols mapping
  * ISO currency codes mapped to their standardized symbol representations
@@ -34,6 +46,10 @@ export const CurrencySymbols: Record<string, string> = {
   RUB: "₽",
 };
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /**
  * Formats a numeric value as currency string with locale-specific formatting
  *
@@ -57,22 +73,27 @@ export const CurrencySymbols: Record<string, string> = {
  * - Very large numbers → Uses locale-specific grouping (thousands separators)
  * - Negative values → Returns negative value with currency symbol at start
  */
-export function formatCurrency(value: number, currency: string, locale: string): string {
-  // Validate currency code is 3 letters using Intl lookup
-  const currencyDisplay = new Intl.DisplayNames(["en"], { type: "currency" }).of(currency);
-  if (!currencyDisplay) {
-    throw new Error(`Invalid currency code: ${currency}. Expected 3-letter ISO 4217 code.`);
+export function formatCurrency(
+  value: number,
+  currency: CurrencyCode | string,
+  locale: string,
+): string {
+  if (!supportedCurrencyCodes.has(currency as CurrencyCode)) {
+    throw new Error(`Unsupported currency code: ${currency}.`);
   }
 
-  // Create currency formatter with options
-  const formatter = new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency: currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  const supportedCurrency = currency as CurrencyCode;
+
+  const fractionDigits = CurrencyFractionDigits[supportedCurrency];
 
   try {
+    const formatter = new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency: supportedCurrency,
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    });
+
     return formatter.format(value);
   } catch (error) {
     throw new Error(
@@ -142,14 +163,24 @@ export function parseCurrency(formattedValue: string, locale: string): number {
   const thousandSeparator = new Intl.NumberFormat(locale).format(1000).charAt(1);
   const parts = valueWithoutSign.split(decimalSeparator);
 
+  const thousandSeparatorPattern = thousandSeparator
+    ? new RegExp(escapeRegExp(thousandSeparator), "g")
+    : null;
+
   if (parts.length === 2) {
     // Has decimal part: remove thousands separator from integer part
-    const integerPart = parts[0]?.replace(new RegExp(thousandSeparator, "g"), "") ?? "";
-    const fractionalPart = parts[1]?.replace(new RegExp(thousandSeparator, "g"), "") ?? "";
+    const integerPart = thousandSeparatorPattern
+      ? (parts[0]?.replace(thousandSeparatorPattern, "") ?? "")
+      : (parts[0] ?? "");
+    const fractionalPart = thousandSeparatorPattern
+      ? (parts[1]?.replace(thousandSeparatorPattern, "") ?? "")
+      : (parts[1] ?? "");
     valueWithoutSign = `${integerPart}${decimalSeparator}${fractionalPart}`;
   } else if (parts.length === 1) {
     // No decimal part (integer value)
-    const integerPart = parts[0]?.replace(new RegExp(thousandSeparator, "g"), "") ?? "";
+    const integerPart = thousandSeparatorPattern
+      ? (parts[0]?.replace(thousandSeparatorPattern, "") ?? "")
+      : (parts[0] ?? "");
     valueWithoutSign = integerPart;
   }
 

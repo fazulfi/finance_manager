@@ -1,6 +1,12 @@
+import Link from "next/link";
+import { ThemeToggle } from "@/components/common/ThemeToggle";
+
 export default function HomePage(): React.JSX.Element {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background px-4 py-16">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
       <div className="mx-auto w-full max-w-4xl text-center">
         {/* Eyebrow label */}
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-muted px-4 py-1.5">
@@ -38,12 +44,12 @@ export default function HomePage(): React.JSX.Element {
 
         {/* CTA group */}
         <div className="flex flex-col items-center gap-4">
-          <a
-            href="#"
+          <Link
+            href="/login"
             className="inline-flex items-center justify-center rounded-lg bg-primary px-8 py-3 text-base font-semibold text-primary-foreground shadow-sm transition-all duration-150 hover:bg-primary/90 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             Get Started
-          </a>
+          </Link>
           <p className="text-sm text-muted-foreground">
             Free to use.{" "}
             <span className="font-medium text-foreground">No credit card required.</span>

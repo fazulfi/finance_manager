@@ -15,6 +15,7 @@ import { InsightsPanel } from "./InsightsPanel";
 import { TrendAnalysis } from "./TrendAnalysis";
 import { BudgetRecommendations } from "./BudgetRecommendations";
 import { AnomalyDetection } from "./AnomalyDetection";
+import { EmptyState } from "@/components/common/EmptyState";
 
 interface FilterState {
   dateFrom: Date | null;
@@ -146,9 +147,11 @@ export function Dashboard(): React.JSX.Element {
               }))}
             />
           ) : (
-            <div className="flex h-[400px] items-center justify-center text-muted-foreground">
-              No data available
-            </div>
+            <EmptyState
+              title="No chart data yet"
+              description="Add some transactions to unlock income versus expense trends."
+              className="h-[400px]"
+            />
           )}
         </div>
 
@@ -157,9 +160,11 @@ export function Dashboard(): React.JSX.Element {
           {analytics.chartData.category.length > 0 ? (
             <CategoryBreakdown data={analytics.chartData.category as any} />
           ) : (
-            <div className="flex h-[400px] items-center justify-center text-muted-foreground">
-              No data available
-            </div>
+            <EmptyState
+              title="No category data"
+              description="Category insights will appear after your first expenses."
+              className="h-[400px]"
+            />
           )}
         </div>
       </div>

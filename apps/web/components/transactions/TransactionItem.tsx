@@ -1,6 +1,7 @@
 // apps/web/components/transactions/TransactionItem.tsx
 import { ChevronRight, Circle } from "lucide-react";
 import { cn } from "@finance/ui";
+import { formatCurrency } from "@finance/utils";
 
 interface TransactionItemProps {
   transaction: {
@@ -49,12 +50,8 @@ const TYPE_BORDER_COLORS = {
 
 function formatAmount(amount: number, currency: string): string {
   try {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
+    const locale = currency === "IDR" ? "id-ID" : "en-US";
+    return formatCurrency(amount, currency, locale);
   } catch {
     return `${currency} ${amount.toFixed(2)}`;
   }

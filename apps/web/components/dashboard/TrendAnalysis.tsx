@@ -41,7 +41,7 @@ export function TrendAnalysis({ trends }: TrendAnalysisProps): React.JSX.Element
               </span>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              {formatCurrency(trend.previousPeriodAmount)} -> {formatCurrency(trend.currentPeriodAmount)} (
+              {formatCurrency(trend.previousPeriodAmount)} {"->"} {formatCurrency(trend.currentPeriodAmount)} (
               {trend.changePercent.toFixed(1)}%)
             </p>
           </div>

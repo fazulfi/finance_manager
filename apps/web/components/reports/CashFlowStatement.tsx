@@ -2,10 +2,11 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@finance/ui";
 import { Line, LineChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { formatCurrency } from "@finance/utils";
 import type { GeneratedReport } from "./types";
 
 function money(amount: number): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
+  return formatCurrency(amount, "IDR", "id-ID");
 }
 
 export function CashFlowStatement({ report }: { report: GeneratedReport }): React.JSX.Element {
@@ -55,4 +56,3 @@ export function CashFlowStatement({ report }: { report: GeneratedReport }): Reac
     </Card>
   );
 }
-

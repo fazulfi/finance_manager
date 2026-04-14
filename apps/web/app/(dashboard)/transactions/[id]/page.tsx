@@ -13,7 +13,7 @@ interface TransactionDetailPageProps {
   };
 }
 
-type SupportedCurrency = "IDR" | "USD" | "EUR" | "SGD" | "JPY" | "CNY" | "AUD" | "CAD";
+type SupportedCurrency = "IDR" | "USD" | "EUR" | "SGD" | "JPY";
 
 export default function TransactionDetailPage({
   params,

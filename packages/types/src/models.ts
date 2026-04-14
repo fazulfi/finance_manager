@@ -12,6 +12,7 @@ import type {
   InvestmentType,
   GoalStatus,
   DebtType,
+  CurrencyCode,
 } from "./enums";
 
 /**
@@ -48,7 +49,7 @@ export interface Account {
   name: string;
   description?: string;
   type: AccountType;
-  currency: string; // ISO currency code, defaults to "IDR"
+  currency: CurrencyCode;
   balance: number;
   initialBalance: number;
   isActive: boolean;
@@ -70,7 +71,7 @@ export interface Transaction {
   accountId: string; // Foreign key (ObjectId)
   date: Date;
   amount: number;
-  currency: string; // ISO currency code, defaults to "IDR"
+  currency: CurrencyCode;
   type: TransactionType;
   category: string;
   subcategory?: string;
@@ -292,4 +293,19 @@ export interface NetWorthSnapshot {
 
   // Relation
   user: User;
+}
+
+/**
+ * ExchangeRate model — Daily currency conversion snapshots
+ */
+export interface ExchangeRate {
+  id: string; // MongoDB ObjectId
+  base: CurrencyCode;
+  target: CurrencyCode;
+  rate: number;
+  snapshotDate: Date;
+  source: string;
+  fetchedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }

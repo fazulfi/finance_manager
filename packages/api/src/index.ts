@@ -9,6 +9,7 @@ export { investmentRouter } from "./routers/investment.js";
 export { netWorthRouter } from "./routers/net-worth.js";
 export { goalRouter } from "./routers/goal.js";
 export { debtRouter } from "./routers/debt.js";
+export { exchangeRateRouter } from "./routers/exchange-rate.js";
 export { projectRouter } from "./routers/project.js";
 export { budgetRouter } from "./routers/budget.js";
 export { reportRouter } from "./routers/report.js";

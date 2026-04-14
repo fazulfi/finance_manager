@@ -44,7 +44,7 @@ interface ParsedNotes {
   metadata: Metadata;
 }
 
-interface ValueMetrics {
+export interface ValueMetrics {
   amount: number;
   cost: number;
   currentValue: number;
@@ -295,9 +295,7 @@ export const investmentRouter = router({
       const skip = (page - 1) * limit;
 
       const dbTypeFilter = toDbTypeFilter(type);
-      const where: Parameters<typeof ctx.db.investment.findMany>[0]["where"] = {
-        userId: ctx.session.user.id,
-      };
+      const where: Record<string, unknown> = { userId: ctx.session.user.id };
       if (dbTypeFilter) {
         where.type = dbTypeFilter;
       }

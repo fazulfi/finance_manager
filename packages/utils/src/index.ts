@@ -2,6 +2,7 @@
 // Re-exports for easy access across monorepo
 
 export * from "./currency";
+export * from "./currency-conversion";
 export * from "./date";
 export * from "./number";
 export * from "./validation";

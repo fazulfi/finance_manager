@@ -1,8 +1,12 @@
 import React from "react";
+import { ThemeToggle } from "@/components/common/ThemeToggle";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative min-h-screen bg-background flex flex-col items-center justify-center px-4 py-12 overflow-hidden">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
       {/* Background radial flourish */}
       <div
         className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,hsl(var(--primary)/0.08),transparent)]"

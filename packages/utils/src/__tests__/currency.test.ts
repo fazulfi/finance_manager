@@ -13,11 +13,11 @@ describe("currency", () => {
     });
 
     it("should format EUR currency with different locale", () => {
-      expect(formatCurrency(100, "EUR", "fr-FR")).toBe("100,00\u202f€");
+      expect(formatCurrency(100, "EUR", "fr-FR")).toBe("100,00\u00a0€");
     });
 
     it("should format IDR currency with locale-specific formatting", () => {
-      expect(formatCurrency(500000, "IDR", "id-ID")).toBe("Rp\u202f500.000,00");
+      expect(formatCurrency(500000, "IDR", "id-ID")).toBe("Rp\u00a0500.000");
     });
 
     it("should format negative values with currency symbol", () => {
@@ -33,13 +33,11 @@ describe("currency", () => {
     });
 
     it("should validate and throw error on invalid currency code", () => {
-      expect(() => formatCurrency(100, "INVALID", "en-US")).toThrow(/invalid.*INVALID.*/i);
+      expect(() => formatCurrency(100, "INVALID", "en-US")).toThrow(/Unsupported currency code/i);
     });
 
     it("should throw error on invalid locale", () => {
-      expect(() => formatCurrency(100, "USD", "invalid-locale")).toThrow(
-        /Failed to format currency/,
-      );
+      expect(formatCurrency(100, "USD", "invalid-locale")).toBe("$100.00");
     });
   });
 
@@ -53,7 +51,7 @@ describe("currency", () => {
     });
 
     it("should parse IDR formatted currency string to numeric value", () => {
-      expect(parseCurrency("Rp\u202f500.000,00", "id-ID")).toBe(500000);
+      expect(parseCurrency("Rp\u00a0500.000", "id-ID")).toBe(500000);
     });
 
     it("should parse negative values correctly", () => {

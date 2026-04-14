@@ -6,6 +6,7 @@ import { Button, Skeleton, toast, buttonVariants } from "@finance/ui";
 import { AlertCircle, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AccountCard } from "./AccountCard";
+import { EmptyState } from "@/components/common/EmptyState";
 
 const PAGE_SIZE = 20;
 
@@ -124,10 +125,10 @@ export function AccountList(): React.JSX.Element {
     if (page > 1) {
       return (
         <div className="space-y-4">
-          <div className="rounded-lg border border-dashed p-10 text-center">
-            <h2 className="text-lg font-semibold">No accounts on this page</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Try going back to a previous page.</p>
-          </div>
+          <EmptyState
+            title="No accounts on this page"
+            description="Try going back to a previous page."
+          />
           <div className="flex items-center justify-center">
             <Button
               type="button"
@@ -142,19 +143,16 @@ export function AccountList(): React.JSX.Element {
     }
 
     return (
-      <div className="rounded-lg border border-dashed p-10 text-center">
-        <h2 className="text-lg font-semibold">No accounts yet</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Create your first account to start tracking balances and transfers.
-        </p>
-        <Link
-          href="/accounts/new"
-          className={buttonVariants({ className: "mt-4 inline-flex gap-2" })}
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Create account
-        </Link>
-      </div>
+      <EmptyState
+        title="No accounts yet"
+        description="Create your first account to start tracking balances and transfers."
+        action={
+          <Link href="/accounts/new" className={buttonVariants({ className: "inline-flex gap-2" })}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Create account
+          </Link>
+        }
+      />
     );
   }
 

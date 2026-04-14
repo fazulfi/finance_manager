@@ -89,6 +89,14 @@ enum DebtType {
   OTHER
 }
 
+enum CurrencyCode {
+  IDR
+  USD
+  EUR
+  SGD
+  JPY
+}
+
 // ─── Embedded Types ───────────────────────────────────────────────────────────
 
 /// Embedded budget line item — stored inside Budget document, not a collection
@@ -135,7 +143,7 @@ model Account {
   name           String
   description    String?
   type           AccountType
-  currency       String      @default("IDR")
+  currency       CurrencyCode @default(IDR)
   balance        Float       @default(0)
   initialBalance Float       @default(0)
   isActive       Boolean     @default(true)
@@ -157,7 +165,7 @@ model Transaction {
   accountId     String          @db.ObjectId
   date          DateTime
   amount        Float
-  currency      String          @default("IDR")
+  currency      CurrencyCode    @default(IDR)
   type          TransactionType
   category      String
   subcategory   String?
@@ -182,6 +190,23 @@ model Transaction {
   @@index([userId, type])
   @@index([userId, project, date])
   @@map("transactions")
+}
+
+model ExchangeRate {
+  id           String       @id @default(auto()) @map("_id") @db.ObjectId
+  base         CurrencyCode
+  target       CurrencyCode
+  rate         Float
+  snapshotDate DateTime
+  source       String
+  fetchedAt    DateTime     @default(now())
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([base, target, snapshotDate])
+  @@index([base, target])
+  @@index([snapshotDate])
+  @@map("exchange_rates")
 }
 
 model Category {

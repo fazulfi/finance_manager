@@ -4,7 +4,7 @@ import { z } from "zod";
 import { router, protectedProcedure, objectId } from "../trpc.js";
 
 const TransactionTypeEnum = z.enum(["INCOME", "EXPENSE", "TRANSFER"]);
-const CurrencyEnum = z.enum(["IDR", "USD", "EUR", "SGD", "JPY", "CNY", "AUD", "CAD"]);
+const CurrencyEnum = z.enum(["IDR", "USD", "EUR", "SGD", "JPY"]);
 
 export const transactionRouter = router({
   list: protectedProcedure
@@ -94,7 +94,7 @@ export const transactionRouter = router({
         accountId: objectId,
         date: z.date(),
         amount: z.number().positive(),
-        currency: z.string().min(1).max(10).default("IDR"),
+        currency: CurrencyEnum.default("IDR"),
         type: TransactionTypeEnum,
         category: z.string().min(1).max(500),
         subcategory: z.string().max(500).optional(),
@@ -201,7 +201,7 @@ export const transactionRouter = router({
         id: objectId,
         date: z.date().optional(),
         amount: z.number().positive().optional(),
-        currency: z.string().min(1).max(10).optional(),
+        currency: CurrencyEnum.optional(),
         type: TransactionTypeEnum.optional(),
         category: z.string().min(1).max(500).optional(),
         subcategory: z.string().max(500).optional(),
@@ -379,14 +379,13 @@ export const transactionRouter = router({
         categories: transactions.reduce(
           (acc, t) => {
             if (t.category) {
-              if (!acc[t.category]) {
-                acc[t.category] = { expense: 0, income: 0 };
-              }
+              const categoryStats = acc[t.category] ?? { expense: 0, income: 0 };
               if (t.type === "EXPENSE") {
-                acc[t.category].expense += t.amount;
+                categoryStats.expense += t.amount;
               } else if (t.type === "INCOME") {
-                acc[t.category].income += t.amount;
+                categoryStats.income += t.amount;
               }
+              acc[t.category] = categoryStats;
             }
             return acc;
           },
@@ -394,24 +393,6 @@ export const transactionRouter = router({
         ),
       };
     }),
-
-  delete: protectedProcedure.input(z.object({ id: objectId })).mutation(async ({ ctx, input }) => {
-    const existing = await ctx.db.transaction.findFirst({
-      where: { id: input.id, userId: ctx.session.user.id },
-    });
-    if (!existing) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "Transaction not found",
-      });
-    }
-    // Soft delete — don't restore balances (by design)
-    await ctx.db.transaction.update({
-      where: { id: input.id, userId: ctx.session.user.id },
-      data: { isRecurring: false } as Parameters<typeof ctx.db.transaction.update>[0]["data"], // Stop recurring transactions on delete
-    });
-    return { success: true };
-  }),
 
   getStats: protectedProcedure
     .input(
@@ -657,42 +638,6 @@ export const transactionRouter = router({
 
         return { count: created.count };
       });
-    }),
-
-  bulkDelete: protectedProcedure
-    .input(z.array(objectId).max(100, { message: "Maximum 100 transactions per request" }))
-    .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id;
-
-      const where = {
-        id: { in: input },
-        userId,
-      };
-
-      const result = await ctx.db.transaction.updateMany({
-        where,
-        data: { isRecurring: false },
-      });
-
-      return { count: result.count };
-    }),
-
-  bulkDelete: protectedProcedure
-    .input(z.array(objectId).max(100, { message: "Maximum 100 transactions per request" }))
-    .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id;
-
-      const where = {
-        id: { in: input },
-        userId,
-      };
-
-      const result = await ctx.db.transaction.updateMany({
-        where,
-        data: { isRecurring: false },
-      });
-
-      return { count: result.count };
     }),
 
   bulkDelete: protectedProcedure

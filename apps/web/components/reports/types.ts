@@ -36,6 +36,7 @@ export interface GeneratedReport {
       status: "PLANNED";
       note: string;
     };
+    reportCurrency: "IDR";
   };
   monthlySummary: {
     income: number;
@@ -79,4 +80,3 @@ export interface GeneratedReport {
     }>;
   };
 }
-

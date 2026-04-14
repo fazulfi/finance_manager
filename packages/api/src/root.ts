@@ -4,6 +4,7 @@ import { budgetRouter } from "./routers/budget.js";
 import { categoryRouter } from "./routers/category.js";
 import { dashboardRouter } from "./routers/dashboard.js";
 import { debtRouter } from "./routers/debt.js";
+import { exchangeRateRouter } from "./routers/exchange-rate.js";
 import { goalRouter } from "./routers/goal.js";
 import { investmentRouter } from "./routers/investment.js";
 import { netWorthRouter } from "./routers/net-worth.js";
@@ -25,6 +26,7 @@ export const appRouter = router({
   netWorth: netWorthRouter,
   goal: goalRouter,
   debt: debtRouter,
+  exchangeRate: exchangeRateRouter,
   dashboard: dashboardRouter,
   report: reportRouter,
 });

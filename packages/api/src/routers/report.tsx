@@ -10,6 +10,7 @@ import {
 import { z } from "zod";
 import type { Context } from "../trpc.js";
 import { objectId, protectedProcedure, router } from "../trpc.js";
+import type { SupportedCurrency } from "../lib/exchange-rate.js";
 
 const ReportTypeEnum = z.enum([
   "MONTHLY_SUMMARY",
@@ -71,7 +72,7 @@ interface ProjectSummaryItem {
   targetDate: Date | null;
 }
 
-interface ReportResult {
+export interface ReportResult {
   meta: {
     type: z.infer<typeof ReportTypeEnum>;
     generatedAt: Date;
@@ -92,6 +93,7 @@ interface ReportResult {
       status: "PLANNED";
       note: string;
     };
+    reportCurrency: "IDR";
   };
   monthlySummary: {
     income: number;
@@ -125,6 +127,8 @@ interface ReportResult {
       projectId: string | null;
       projectName: string;
       description: string;
+      originalAmount: number;
+      originalCurrency: string;
       amount: number;
       currency: string;
       tags: string[];
@@ -144,6 +148,50 @@ function endOfMonth(date: Date): Date {
 
 function toISODate(date: Date): string {
   return date.toISOString().split("T")[0] ?? "";
+}
+
+function toUtcDay(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+function buildIdrRateResolver(
+  rates: Array<{ base: string; target: string; rate: number; snapshotDate: Date }>,
+) {
+  const grouped = new Map<SupportedCurrency, Array<{ day: Date; rate: number }>>();
+
+  for (const rate of rates) {
+    if (rate.target !== "IDR") {
+      continue;
+    }
+
+    const base = rate.base as SupportedCurrency;
+    const list = grouped.get(base) ?? [];
+    list.push({ day: toUtcDay(rate.snapshotDate), rate: rate.rate });
+    grouped.set(base, list);
+  }
+
+  for (const list of grouped.values()) {
+    list.sort((a, b) => b.day.getTime() - a.day.getTime());
+  }
+
+  return (currency: string, date: Date): number => {
+    if (currency === "IDR") {
+      return 1;
+    }
+
+    const list = grouped.get(currency as SupportedCurrency);
+    if (!list || list.length === 0) {
+      throw new Error(`Missing IDR exchange rate for ${currency}`);
+    }
+
+    const targetDay = toUtcDay(date).getTime();
+    const matched = list.find((item) => item.day.getTime() <= targetDay) ?? list[0];
+    if (!matched || !Number.isFinite(matched.rate) || matched.rate <= 0) {
+      throw new Error(`Invalid IDR exchange rate for ${currency}`);
+    }
+
+    return matched.rate;
+  };
 }
 
 function resolveDateRange(input: ReportInput): { dateFrom: Date; dateTo: Date } {
@@ -220,7 +268,7 @@ async function buildReportData(options: ReportBuildOptions): Promise<ReportResul
     historicalWhere.type = { in: ["INCOME", "EXPENSE"] };
   }
 
-  const [transactions, transactionsAfterRange, accounts, projects] = await Promise.all([
+  const [transactions, transactionsAfterRange, accounts, projects, idrRates] = await Promise.all([
     ctx.db.transaction.findMany({
       where: transactionWhere,
       orderBy: { date: "asc" },
@@ -235,6 +283,8 @@ async function buildReportData(options: ReportBuildOptions): Promise<ReportResul
       select: {
         type: true,
         amount: true,
+        currency: true,
+        date: true,
       },
     }),
     ctx.db.account.findMany({
@@ -247,6 +297,7 @@ async function buildReportData(options: ReportBuildOptions): Promise<ReportResul
         name: true,
         balance: true,
         initialBalance: true,
+        currency: true,
       },
     }),
     ctx.db.project.findMany({
@@ -256,10 +307,28 @@ async function buildReportData(options: ReportBuildOptions): Promise<ReportResul
       },
       orderBy: { createdAt: "desc" },
     }),
+    ctx.db.exchangeRate.findMany({
+      where: {
+        target: "IDR",
+        snapshotDate: { lte: toUtcDay(dateTo) },
+      },
+      select: {
+        base: true,
+        target: true,
+        rate: true,
+        snapshotDate: true,
+      },
+      orderBy: { snapshotDate: "desc" },
+    }),
   ]);
 
+  const resolveIdrRate = buildIdrRateResolver(idrRates);
+
   const projectNames = new Map(projects.map((project) => [project.id, project.name]));
-  const accountTotalBalance = accounts.reduce((sum, account) => sum + account.balance, 0);
+  const accountTotalBalance = accounts.reduce(
+    (sum, account) => sum + account.balance * resolveIdrRate(account.currency, dateTo),
+    0,
+  );
 
   let totalIncome = 0;
   let totalExpense = 0;
@@ -270,10 +339,12 @@ async function buildReportData(options: ReportBuildOptions): Promise<ReportResul
   const rawTransactions: ReportResult["raw"]["transactions"] = [];
 
   for (const tx of transactions) {
+    const convertedAmount = tx.amount * resolveIdrRate(tx.currency, tx.date);
+
     if (tx.type === "INCOME") {
-      totalIncome += tx.amount;
+      totalIncome += convertedAmount;
     } else if (tx.type === "EXPENSE") {
-      totalExpense += tx.amount;
+      totalExpense += convertedAmount;
     } else if (!filters.includeTransfers) {
       continue;
     }
@@ -283,9 +354,9 @@ async function buildReportData(options: ReportBuildOptions): Promise<ReportResul
     const categoryKey = tx.category || "Uncategorized";
     const categoryEntry = categoryMap.get(categoryKey) ?? { income: 0, expense: 0, count: 0 };
     if (tx.type === "INCOME") {
-      categoryEntry.income += tx.amount;
+      categoryEntry.income += convertedAmount;
     } else if (tx.type === "EXPENSE") {
-      categoryEntry.expense += tx.amount;
+      categoryEntry.expense += convertedAmount;
     }
     categoryEntry.count += 1;
     categoryMap.set(categoryKey, categoryEntry);
@@ -293,16 +364,16 @@ async function buildReportData(options: ReportBuildOptions): Promise<ReportResul
     const dateKey = toISODate(tx.date);
     const dayEntry = dailyMap.get(dateKey) ?? { income: 0, expense: 0 };
     if (tx.type === "INCOME") {
-      dayEntry.income += tx.amount;
+      dayEntry.income += convertedAmount;
     } else if (tx.type === "EXPENSE") {
-      dayEntry.expense += tx.amount;
+      dayEntry.expense += convertedAmount;
     }
     dailyMap.set(dateKey, dayEntry);
 
     if (tx.project) {
       const current = projectPeriodSpent.get(tx.project) ?? { spent: 0, count: 0 };
       if (tx.type === "EXPENSE") {
-        current.spent += tx.amount;
+        current.spent += convertedAmount;
       }
       current.count += 1;
       projectPeriodSpent.set(tx.project, current);
@@ -317,18 +388,21 @@ async function buildReportData(options: ReportBuildOptions): Promise<ReportResul
       projectId: tx.project ?? null,
       projectName: tx.project ? (projectNames.get(tx.project) ?? "Unknown project") : "",
       description: tx.description ?? "",
-      amount: tx.amount,
-      currency: tx.currency,
+      originalAmount: tx.amount,
+      originalCurrency: tx.currency,
+      amount: convertedAmount,
+      currency: "IDR",
       tags: tx.tags,
     });
   }
 
   let netAfterRange = 0;
   for (const tx of transactionsAfterRange) {
+    const convertedAmount = tx.amount * resolveIdrRate(tx.currency, tx.date);
     if (tx.type === "INCOME") {
-      netAfterRange += tx.amount;
+      netAfterRange += convertedAmount;
     } else if (tx.type === "EXPENSE") {
-      netAfterRange -= tx.amount;
+      netAfterRange -= convertedAmount;
     }
   }
 
@@ -348,13 +422,19 @@ async function buildReportData(options: ReportBuildOptions): Promise<ReportResul
     select: {
       project: true,
       amount: true,
+      currency: true,
+      date: true,
     },
   });
 
   const totalSpentByProject = new Map<string, number>();
   for (const tx of allProjectExpenses) {
     if (!tx.project) continue;
-    totalSpentByProject.set(tx.project, (totalSpentByProject.get(tx.project) ?? 0) + tx.amount);
+    const convertedAmount = tx.amount * resolveIdrRate(tx.currency, tx.date);
+    totalSpentByProject.set(
+      tx.project,
+      (totalSpentByProject.get(tx.project) ?? 0) + convertedAmount,
+    );
   }
 
   const categoryBreakdown: CategorySummaryItem[] = Array.from(categoryMap.entries())
@@ -424,6 +504,7 @@ async function buildReportData(options: ReportBuildOptions): Promise<ReportResul
       },
       filters,
       emailDelivery,
+      reportCurrency: "IDR",
     },
     monthlySummary: {
       income: totalIncome,

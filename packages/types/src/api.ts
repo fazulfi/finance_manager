@@ -13,6 +13,7 @@ import type {
   GoalStatus,
   DebtType,
   TransactionType,
+  CurrencyCode,
 } from "./enums";
 import type {
   Account,
@@ -51,7 +52,7 @@ export interface CreateAccountInput {
   name: string;
   description?: string;
   type: AccountType;
-  currency?: string;
+  currency?: CurrencyCode;
   initialBalance?: number;
 }
 
@@ -93,7 +94,7 @@ export interface CreateTransactionInput {
   accountId: string;
   date: Date;
   amount: number;
-  currency?: string;
+  currency?: CurrencyCode;
   type: TransactionType;
   category: string;
   subcategory?: string;
@@ -109,7 +110,7 @@ export interface UpdateTransactionInput {
   id: string;
   date?: Date;
   amount?: number;
-  currency?: string;
+  currency?: CurrencyCode;
   type?: TransactionType;
   category?: string;
   subcategory?: string;
@@ -564,4 +565,29 @@ export interface NetWorthHistoryItem {
   netWorth: number;
   growthRate: number;
   isSnapshot: boolean;
+}
+
+/**
+ * Exchange rate router types
+ */
+export interface GetExchangeRatesInput {
+  base?: CurrencyCode;
+  target?: CurrencyCode;
+  date?: Date;
+}
+
+export interface ConvertCurrencyInput {
+  amount: number;
+  from: CurrencyCode;
+  to: CurrencyCode;
+  date?: Date;
+}
+
+export interface ConvertCurrencyOutput {
+  amount: number;
+  from: CurrencyCode;
+  to: CurrencyCode;
+  rate: number;
+  convertedAmount: number;
+  asOf: Date;
 }

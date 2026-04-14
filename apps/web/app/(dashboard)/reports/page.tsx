@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import { ReportBuilder } from "@/components/reports/ReportBuilder";
+import dynamic from "next/dynamic";
+
+const ReportBuilder = dynamic(
+  () => import("@/components/reports/ReportBuilder").then((mod) => mod.ReportBuilder),
+  { ssr: false },
+);
 
 export const metadata: Metadata = {
   title: "Reports",
@@ -20,4 +25,3 @@ export default function ReportsPage(): React.JSX.Element {
     </div>
   );
 }
-

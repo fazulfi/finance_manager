@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { Banknote, Building2, CreditCard, Trash2, Wallet } from "lucide-react";
+import { useState } from "react";
+import { formatCurrency } from "@finance/utils";
 import { Button, Card, CardContent, CardHeader, CardTitle, buttonVariants } from "@finance/ui";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 
 const ACCOUNT_TYPE_ICONS = {
   CHECKING: Building2,
@@ -26,12 +29,8 @@ interface AccountCardProps {
 
 function formatBalance(value: number, currency: string): string {
   try {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
+    const locale = currency === "IDR" ? "id-ID" : "en-US";
+    return formatCurrency(value, currency, locale);
   } catch {
     return `${currency} ${value.toFixed(2)}`;
   }
@@ -42,6 +41,7 @@ export function AccountCard({
   onDelete,
   isDeleting = false,
 }: AccountCardProps): React.JSX.Element {
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const Icon = ACCOUNT_TYPE_ICONS[account.type] ?? Banknote;
 
   return (
@@ -79,7 +79,7 @@ export function AccountCard({
               type="button"
               variant="outline"
               size="icon"
-              onClick={() => onDelete(account.id)}
+              onClick={() => setConfirmOpen(true)}
               disabled={isDeleting}
               aria-label={`Delete ${account.name}`}
             >
@@ -88,6 +88,18 @@ export function AccountCard({
           )}
         </div>
       </CardContent>
+      {onDelete && (
+        <ConfirmDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          title={`Delete ${account.name}?`}
+          description="This action will archive the account from active lists. You cannot undo this from this screen."
+          confirmLabel="Delete account"
+          destructive={true}
+          loading={isDeleting}
+          onConfirm={() => onDelete(account.id)}
+        />
+      )}
     </Card>
   );
 }

@@ -7,7 +7,7 @@ import { router, protectedProcedure, objectId, type Context } from "../trpc.js";
 const ExchangeEnum = z.enum(["NYSE", "NASDAQ", "LSE", "OTHER"]);
 const PAGE_SIZE_DEFAULT = 20;
 
-interface WatchStockView {
+export interface WatchStockView {
   id: string;
   ticker: string;
   name: string;

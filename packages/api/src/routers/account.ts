@@ -4,6 +4,7 @@ import { z } from "zod";
 import { router, protectedProcedure, objectId } from "../trpc.js";
 
 const AccountTypeEnum = z.enum(["CHECKING", "SAVINGS", "CREDIT", "INVESTMENT", "CASH", "OTHER"]);
+const CurrencyEnum = z.enum(["IDR", "USD", "EUR", "SGD", "JPY"]);
 
 export const accountRouter = router({
   list: protectedProcedure
@@ -88,7 +89,7 @@ export const accountRouter = router({
         name: z.string().min(1).max(100),
         description: z.string().max(500).optional(),
         type: AccountTypeEnum,
-        currency: z.string().min(1).max(10).default("IDR"),
+        currency: CurrencyEnum.default("IDR"),
         initialBalance: z.number().default(0),
       }),
     )

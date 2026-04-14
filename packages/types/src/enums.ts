@@ -70,3 +70,11 @@ export enum DebtType {
   PERSONAL_LOAN,
   OTHER,
 }
+
+export enum CurrencyCode {
+  IDR = "IDR",
+  USD = "USD",
+  EUR = "EUR",
+  SGD = "SGD",
+  JPY = "JPY",
+}

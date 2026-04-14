@@ -8,6 +8,8 @@ import { CategoryReport } from "./CategoryReport";
 import { IncomeStatement } from "./IncomeStatement";
 import { ProjectReport } from "./ProjectReport";
 import type { GeneratedReport, ReportInput, ReportType } from "./types";
+import { CurrencyConverter } from "@/components/transactions/CurrencyConverter";
+import { ExchangeRateDisplay } from "@/components/transactions/ExchangeRateDisplay";
 
 const TYPE_OPTIONS: Array<{ value: ReportType; label: string }> = [
   { value: "MONTHLY_SUMMARY", label: "Monthly Summary" },
@@ -256,6 +258,11 @@ export function ReportBuilder(): React.JSX.Element {
           </TabsContent>
         </Tabs>
       )}
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ExchangeRateDisplay base="USD" target="IDR" />
+        <CurrencyConverter />
+      </div>
     </div>
   );
 }

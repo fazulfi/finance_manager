@@ -4,7 +4,7 @@ import { z } from "zod";
 
 // Zod enum counterparts for use in form schemas with .options
 export const transactionTypeEnum = z.enum(["INCOME", "EXPENSE", "TRANSFER"]);
-export const currencyEnum = z.enum(["IDR", "USD", "EUR", "SGD", "JPY", "CNY", "AUD", "CAD"]);
+export const currencyEnum = z.enum(["IDR", "USD", "EUR", "SGD", "JPY"]);
 
 import {
   AccountType,
@@ -39,7 +39,7 @@ export const accountFormSchema = z.object({
   type: z.nativeEnum(AccountType, {
     errorMap: () => ({ message: "Invalid account type" }),
   }),
-  currency: z.string().min(1, "Currency is required").max(10, "Currency code too long").optional(),
+  currency: currencyEnum.optional(),
   initialBalance: z.coerce.number().min(0, "Initial balance cannot be negative").optional(),
 });
 
@@ -65,7 +65,7 @@ export const transactionFormSchema = z.object({
   accountId: z.string().regex(objectIdRegex, { message: "Invalid account ID format" }),
   date: z.coerce.date({ message: "Invalid date format" }),
   amount: z.coerce.number().min(0, "Amount cannot be negative"),
-  currency: z.string().min(1, "Currency is required").max(10, "Currency code too long").optional(),
+  currency: currencyEnum.optional(),
   type: z.nativeEnum(TransactionType, {
     errorMap: () => ({ message: "Invalid transaction type" }),
   }),

@@ -1,6 +1,7 @@
 // apps/web/components/transactions/TransactionFilters.tsx
 "use client";
 
+import { useEffect, useState } from "react";
 import { Filter, X } from "lucide-react";
 import { Button } from "@finance/ui";
 
@@ -29,6 +30,23 @@ export function TransactionFilters({
   onReset,
   disabled = false,
 }: TransactionFiltersProps): React.JSX.Element {
+  const [searchDraft, setSearchDraft] = useState(filters.search ?? "");
+
+  useEffect(() => {
+    setSearchDraft(filters.search ?? "");
+  }, [filters.search]);
+
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      const normalized = searchDraft.trim();
+      if ((filters.search ?? "") !== normalized) {
+        onFilterChange(normalized ? { search: normalized } : {});
+      }
+    }, 300);
+
+    return () => clearTimeout(handle);
+  }, [filters.search, onFilterChange, searchDraft]);
+
   const hasActiveFilters =
     filters.accountId !== undefined ||
     filters.category !== undefined ||
@@ -56,9 +74,10 @@ export function TransactionFilters({
           <input
             type="text"
             placeholder="Category or description..."
-            value={filters.search ?? ""}
-            onChange={(e) => onFilterChange(e.target.value ? { search: e.target.value } : {})}
+            value={searchDraft}
+            onChange={(e) => setSearchDraft(e.target.value)}
             disabled={disabled}
+            aria-label="Search transactions by category or description"
             className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           />
         </div>
@@ -76,6 +95,7 @@ export function TransactionFilters({
                 onFilterChange(e.target.value ? { dateFrom: new Date(e.target.value) } : {})
               }
               disabled={disabled}
+              aria-label="Filter start date"
               className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <input
@@ -85,6 +105,7 @@ export function TransactionFilters({
                 onFilterChange(e.target.value ? { dateTo: new Date(e.target.value) } : {})
               }
               disabled={disabled}
+              aria-label="Filter end date"
               className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
@@ -106,6 +127,7 @@ export function TransactionFilters({
                 onFilterChange(e.target.value ? { amountMin: parseFloat(e.target.value) } : {})
               }
               disabled={disabled}
+              aria-label="Minimum amount"
               className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <input
@@ -118,6 +140,7 @@ export function TransactionFilters({
                 onFilterChange(e.target.value ? { amountMax: parseFloat(e.target.value) } : {})
               }
               disabled={disabled}
+              aria-label="Maximum amount"
               className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>

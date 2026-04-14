@@ -3,6 +3,7 @@
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Skeleton } from "@finance/ui";
 import { api } from "@finance/api/react";
 import { TransactionItem } from "./TransactionItem";
@@ -77,9 +78,19 @@ export function TransactionListServer({
       ) : (
         <>
           <div className="space-y-2">
-            {transactions.map((transaction) => (
-              <TransactionItem key={transaction.id} transaction={transaction} />
-            ))}
+            <AnimatePresence initial={false}>
+              {transactions.map((transaction) => (
+                <motion.div
+                  key={transaction.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.16 }}
+                >
+                  <TransactionItem transaction={transaction} />
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
 
           {hasMore && !isAtEnd && !error && (
