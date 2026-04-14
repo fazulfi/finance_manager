@@ -51,6 +51,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Charts fit screen on mobile
 - Filters and quick actions functional
 
+## Week 13: Debt Management MVP (2026-04-14)
+
+**Features Implemented:**
+
+- Shared debt analytics (interest, payoff projection, payment schedule, simple snowball) driven by `@finance/utils` so API and UI math stay consistent
+- `debtRouter` now exposes protected procedures for interest calculation, payoff projection, payment schedule generation, and snowball planning with validation guardrails (`maxMonths`, debt count caps, shared `objectId` inputs)
+- Web debt experience with a server-side page, total overview, `DebtCard`, inline `DebtForm`, `PaymentSchedule`, and `SnowballCalculator`, all showing infeasible/truncated states and supporting due-date clearing
+- API-level coverage via `packages/api/src/__tests__/debt.test.ts` plus Vitest wiring (`test` script, devDependency, `vitest.config.ts`)
+
+**Components Created:**
+
+- `packages/utils/src/calculations.ts` debt helpers + `packages/utils/src/__tests__/calculations.test.ts` updates
+- Shared types: `packages/types/src/api.ts` debt analytics contracts, `packages/types/src/forms.ts` debt form refinements
+- Backend: `packages/api/src/routers/debt.ts` analytics procedures, `packages/api/src/__tests__/debt.test.ts`, `packages/api/vitest.config.ts`, `packages/api/package.json` test script/devDependency
+- Web UI: `apps/web/app/(dashboard)/debts/page.tsx`, `apps/web/components/debts/index.ts`, `DebtCard.tsx`, `DebtForm.tsx`, `PaymentSchedule.tsx`, `SnowballCalculator.tsx`
+
+**Dependencies Added:**
+
+- `vitest` ^2.1.4 (devDependency for `@finance/api`) and its `vitest.config.ts` to run API-only tests without leaking UI-only hooks
+
+**Implementation Details:**
+
+- Analytics inputs are bounded (`maxMonths`, `max debt items`) and reuse shared `objectId` validation so the API never fetches more than the necessary nested payloads
+- Payment schedule output flags distinguish truncated tables and infeasible payoffs, schedules honor `dueDate` updates, and the `DebtForm` now clears due dates by sending `null`
+- Snowball calculator sorts debts by smallest remaining balance and projects payoff while respecting the same guardrails as the schedule generator
+- Vitest wiring keeps API tests within `packages/api` so `packages/api` can run `pnpm test` without pulling web-specific test runners
+
+**Known Limitations:**
+
+- Snowball strategy remains the simplest balance-first approach; future work could add avalanche or simulation-based comparisons
+- Manual testing still needs a live MongoDB instance for the debt CRUD/schedule preview flows
+
 ## [Unreleased]
 
 ### Added

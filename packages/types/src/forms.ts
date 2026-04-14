@@ -193,7 +193,7 @@ export const savingsGoalFormSchema = z.object({
 /**
  * Debt form schema — Create/Edit debt form
  */
-export const debtFormSchema = z.object({
+const debtBaseSchema = z.object({
   name: z.string().min(1, "Name is required").max(255, "Name too long"),
   type: z.nativeEnum(DebtType, {
     errorMap: () => ({ message: "Invalid debt type" }),
@@ -203,4 +203,13 @@ export const debtFormSchema = z.object({
   interestRate: z.coerce.number().min(0, "Interest rate cannot be negative"),
   minPayment: z.coerce.number().min(0, "Minimum payment cannot be negative"),
   dueDate: z.coerce.date({ message: "Invalid due date format" }).optional(),
+});
+
+export const debtFormSchema = debtBaseSchema.refine((data) => data.remaining <= data.totalAmount, {
+  message: "Remaining amount cannot exceed total amount",
+  path: ["remaining"],
+});
+
+export const debtSnowballExtraPaymentSchema = z.object({
+  extraPayment: z.coerce.number().min(0, "Extra payment cannot be negative").default(0),
 });

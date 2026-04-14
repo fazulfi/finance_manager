@@ -430,6 +430,91 @@ export interface DebtListInput extends PageInput {
 
 export type DebtListOutput = PageOutput<Debt>;
 
+export interface DebtAnalyticsInput {
+  id: string;
+  name: string;
+  type: DebtType;
+  totalAmount: number;
+  remaining: number;
+  interestRate: number;
+  minPayment: number;
+  dueDate?: Date;
+}
+
+export interface CalculateInterestInput {
+  debt: DebtAnalyticsInput;
+  balance?: number;
+}
+
+export interface CalculateInterestOutput {
+  monthlyInterest: number;
+  isPayoffFeasible: boolean;
+}
+
+export interface ProjectPayoffDateInput {
+  debt: DebtAnalyticsInput;
+  monthlyPayment?: number;
+  startDate?: Date;
+}
+
+export interface ProjectPayoffDateOutput {
+  monthsToPayoff: number | null;
+  payoffDate: Date | null;
+  isPayoffFeasible: boolean;
+}
+
+export interface GeneratePaymentScheduleInput {
+  debt: DebtAnalyticsInput;
+  monthlyPayment?: number;
+  startDate?: Date;
+  maxMonths?: number;
+}
+
+export interface DebtPaymentScheduleItem {
+  month: number;
+  date: Date;
+  payment: number;
+  interest: number;
+  principal: number;
+  balance: number;
+}
+
+export interface GeneratePaymentScheduleOutput {
+  schedule: DebtPaymentScheduleItem[];
+  truncated: boolean;
+  isPayoffFeasible: boolean;
+  monthsToPayoff: number | null;
+  payoffDate: Date | null;
+  totalInterest: number;
+  totalPaid: number;
+}
+
+export interface CalculateSnowballInput {
+  debts: DebtAnalyticsInput[];
+  extraPayment?: number;
+  startDate?: Date;
+  maxMonths?: number;
+}
+
+export interface CalculateSnowballDebtItem {
+  debtId: string;
+  name: string;
+  order: number;
+  monthsToPayoff: number | null;
+  payoffDate: Date | null;
+  totalInterest: number;
+  totalPaid: number;
+}
+
+export interface CalculateSnowballOutput {
+  debts: CalculateSnowballDebtItem[];
+  orderedDebtIds: string[];
+  totalMonths: number | null;
+  totalInterest: number;
+  totalPaid: number;
+  truncated: boolean;
+}
+
 /**
  * Auth router types (user profile)
  */

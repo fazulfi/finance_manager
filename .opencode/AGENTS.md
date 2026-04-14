@@ -147,6 +147,7 @@ packages/
 | Phase 3.2 | Category Management System — 19 default expense categories seeded with icons and colors, Category CRUD operations (list with usageCount, getById, create, update, delete), Category icon/color customization, web CategoryManager with forms/pickers, mobile CategoryGrid with usageCount badges, "New" badge for 0-transaction categories, delete protection for default categories, tRPC category router with usageCount aggregation using findMany + Map, TypeScript type safety (Category.interface usageCount, API contracts), Category seeding in auth register flow, expo-haptics dependency installed; type-check PASS for all category-related code; web/mobile consistency in category UI | ✅ Complete | 2026-04-12 |
 | Step 3.3 | Project/Tag system delivery — project analytics (`project.getAnalytics`) and derived progress updates (`project.updateProgress`), canonical `Transaction.project = ObjectId \| null`, transaction project filters in list/stats, and safe project deletion via pre-delete untagging (`project = null`); verification: type-check PASS for `@finance/ui`, `@finance/api`, `@finance/mobile`, `@finance/types`; `@finance/web` still has unrelated budget type errors; `prisma db push` blocked by local MongoDB connectivity | ✅ Complete | 2026-04-13 |
 | Phase 3.7 | Savings Goals Feature — Complete backend procedures and full web+mobile UI for savings goals; create/edit goals with name, target amount, deadline, account linkage; manual contributions with ownership validation; progress visualization with circular progress display; milestone detection at 25%, 50%, 75%, 100% of target amount with toast notifications; monthly savings calculation and projected completion date; SVG circular progress with milestone badges; goal cards with swipe-to-contribute gestures (mobile), optimistic UI updates, loading/error states, confirmation dialogs; web goals overview page with server-side data fetching, accounts selector, filters; mobile goals tab with Grid layout, touch-optimized inputs, pull-to-refresh; Prisma SavingsGoal model with soft delete support; full TypeScript type coverage; security: userId ownership validation, input constraints (goal name max 100, amount min 1 max 1M), date validation; Files created: goal.ts (3 procedures), web goals components (5), web goals page, mobile goals components (2), mobile goals page; verification: type-check PASS for all goal feature files | ✅ Complete | 2026-04-14 |
+| Phase 3.8 | Debt Management MVP — Shared debt analytics helpers, bounded analytics inputs with `maxMonths`/debt array caps, new `debtRouter` analytics procedures, web debts page/components (DebtCard, DebtForm, PaymentSchedule, SnowballCalculator) rendering infeasible/truncated states plus due-date clearing, API-level Vitest wiring and `debt.test.ts`; all new helpers covered by calculations tests | ✅ Complete | 2026-04-14 |
 | Phase 3.6 | Dashboard & Analytics — Comprehensive dashboard with 5 chart types (Income vs Expense line, Category Breakdown pie, Budget Progress horizontal bars, Cash Flow area, Recent Transactions list), overview cards (Total Balance, Net Cash Flow, Income, Expense), date range filters (7D, 30D, 3M, 6M, 1Y, Custom) with debouncing, account and category multi-select filters, quick actions (Add Transaction, Transfer, View Budgets, View Projects), web components (9: Dashboard, StatCard, Filters, 5 charts, RecentTransactions, QuickActions) using Recharts, mobile components (6: Dashboard, StatsRow, ChartCard, MobileBudgetProgressChart, MobileCategoryBreakdown, TransactionsList) using Victory Native, NativeWind styling, gesture support (swipe, pull-to-refresh), haptic feedback (expo-haptics), performance optimizations (debounce 300ms, virtualization, server-side aggregation, memoization); web uses Server Components for data fetching and Client Components for interactivity; verification: type-check PASS for dashboard-related code, manual testing checklist provided | ✅ Complete | 2026-04-14 |
 | Phase 3.1 | Budget Management System — Budget CRUD operations (create, read, update, delete) with Zod validation, budget type selection (WEEKLY/MONTHLY), period range validation (startDate/endDate must match budgetType), category selection required, budget list page with expense filter (frequent items first), budget detail page with type/period/category/amount/dates/spent/remaining/percentage, budget form supporting type/period/amount/category/name, budget overview card with formatted amounts and progress bar, budgetItem.spent field for embedded data, BudgetPeriod enum (WEEKLY, MONTHLY), budget overview stats showing totalBudget and totalSpent, BudgetCard component used across pages, BudgetForm with custom budget names, budget.resetBudget for spent recalculation via transaction queries, server-side tRPC caller for data fetching, TypeScript type safety throughout, SQL queries for budget list and overview; verification: type-check PASS for all 9 packages; UI review approved with minor usability issues (non-blocking) | ✅ Complete | 2026-04-13 |
 
@@ -154,89 +155,50 @@ _(Updated by docs agent after each completed phase)_
 
 ---
 
-## Last Session (2026-04-14) — Week 10 Savings Goals Feature
+## Last Session (2026-04-14) — Week 13 Debt Management MVP
 
 **Done:**
-- Completed comprehensive Savings Goals feature with full backend procedures and web+mobile UI:
-  - **Backend Procedures (goal.ts):**
-    - `contribute`: Add funds to goal with validation (max 20% of targetAmount per contribution), ownership check, currentBalance update, milestone trigger
-    - `calculateMonthlySavings`: Calculate estimated monthly savings needed to reach goal (days remaining / targetAmount * currentBalance)
-    - `getProgressWithProjection`: Get goal progress with projected completion date based on monthly savings calculation
-  - **Web UI Components (apps/web/components/goals/):**
-    - `GoalsOverview.tsx`: Main goals list page, Total Balance stat card, server-side data fetching, Grid layout, filters (by status/account)
-    - `GoalCard.tsx`: Circular progress (SVG ring), milestone highlighting (25%, 50%, 75%, 100%), formatted amounts, action buttons (Contribute, Edit, Delete)
-    - `ContributeDialog.tsx`: Bottom-sheet contribution dialog with account selector, milestone toast notifications, validation, confirmation
-    - `GoalForm.tsx`: Create/edit form with name, target amount, deadline date picker, account selector, Zod validation, optimistic UI
-  - **Web UI Page (apps/web/app/(dashboard)/goals/page.tsx):** Goals list with server-side tRPC caller, Total Balance stat card, Add/Edit/Delete buttons
-  - **Mobile UI Components (apps/mobile/components/goals/):**
-    - `GoalCard.tsx`: Circular progress with gestures (swipe-right to contribute, long-press for options), touch feedback, milestone indicators
-    - `ContributeSheet.tsx`: Bottom sheet contribution with account selector, milestone notifications, touch-optimized inputs, swipe-to-dismiss
-  - **Mobile UI Page (apps/mobile/app/(tabs)/goals.tsx):** Goals list with Grid layout, circular progress, swipe gestures, server sync
-  - **Mobile Navigation:** Added "Goals" tab to (tabs)/_layout.tsx (Home, Transactions, Budget, Settings, Goals)
-  - **Prisma Schema:** `SavingsGoal` model with id, userId, name, targetAmount, currentBalance, deadline, accountId, createdAt, updatedAt, deletedAt (soft delete)
-  - **TypeScript Types:** `SavingsGoal` interface, goal-related tRPC procedure inputs/outputs in packages/types/src/api.ts
-  - **Form Validation:** Zod schemas for goal forms in packages/types/src/forms.ts
-  - **Milestone System:** Automatic detection at 25%, 50%, 75%, 100% with toast notifications
-  - **Progress Visualization:** SVG circular progress with percentage fill and milestone badges
-  - **UX Enhancements:** Optimistic UI for contributions, loading/error states, confirmation dialogs
-  - **Security:** All procedures include userId ownership validation, input constraints, date validation
-  - **Files Created:** goal.ts (3 procedures), 5 web goals components, 1 web goals page, 2 mobile goals components, 1 mobile goals page
-  - **Files Modified:** schema.prisma (SavingsGoal model), models.ts, api.ts (goal procedure types), forms.ts, root.ts (goalRouter), (tabs)/_layout.tsx (Goals tab)
+- Added shared debt analytics helpers (monthly interest, payoff feasibility, projected payoff date, schedule generation, snowball ordering) plus deterministic tests so all math lives in `@finance/utils`
+- Extended `debtRouter` with protected procedures for `calculateInterest`, `projectPayoffDate`, `generatePaymentSchedule`, and `calculateSnowball`, all using bounded Zod inputs (`objectId`, `maxMonths`, debt count cap) and reusing the shared helpers
+- Built the web debts flow: server-side overview page plus `DebtCard`, `DebtForm`, `PaymentSchedule`, and `SnowballCalculator` client components that surface total debt stats, infeasible/truncated schedule states, and nullable `dueDate` clears
+- Wired package-local Vitest for `@finance/api` (`package.json` script + `vitest.config.ts`) and added `packages/api/src/__tests__/debt.test.ts` for debt procedures, ensuring the API test surface stays server-only
+- Hardened UI/backend contract: `DebtForm` clears `dueDate` via `null`, analytics procedures distinguish truncated/infeasible schedules, and all analytics inputs reuse shared `objectId` validation
 
 **Files Created:**
-- packages/api/src/routers/goal.ts (205 lines, 3 procedures)
-- apps/web/app/(dashboard)/goals/page.tsx (127 lines)
-- apps/web/components/goals/index.ts (1 line)
-- apps/web/components/goals/GoalsOverview.tsx (83 lines)
-- apps/web/components/goals/GoalCard.tsx (148 lines)
-- apps/web/components/goals/ContributeDialog.tsx (145 lines)
-- apps/web/components/goals/GoalForm.tsx (181 lines)
-- apps/mobile/app/(tabs)/goals.tsx (105 lines)
-- apps/mobile/components/goals/GoalCard.tsx (176 lines)
-- apps/mobile/components/goals/ContributeSheet.tsx (156 lines)
+- apps/web/app/(dashboard)/debts/page.tsx
+- apps/web/components/debts/index.ts
+- apps/web/components/debts/DebtCard.tsx
+- apps/web/components/debts/DebtForm.tsx
+- apps/web/components/debts/PaymentSchedule.tsx
+- apps/web/components/debts/SnowballCalculator.tsx
+- packages/api/src/__tests__/debt.test.ts
+- packages/api/vitest.config.ts
 
 **Files Modified:**
-- packages/db/prisma/schema.prisma (SavingsGoal model added)
-- packages/types/src/models.ts (SavingsGoal interface added)
-- packages/types/src/api.ts (goal-related tRPC procedure inputs/outputs added)
-- packages/types/src/forms.ts (goal validation schemas added)
-- packages/api/src/root.ts (goalRouter added)
-- apps/mobile/app/(tabs)/_layout.tsx (Goals tab added to tab bar)
-- CHANGELOG.md (Week 10 Savings Goals entry added)
-- .opencode/AGENTS.md (Current Phase → Phase 3.7, Completed Phases table updated, Last Session documented)
+- packages/utils/src/calculations.ts
+- packages/utils/src/__tests__/calculations.test.ts
+- packages/types/src/api.ts
+- packages/types/src/forms.ts
+- packages/api/package.json
+- packages/api/src/routers/debt.ts
+- CHANGELOG.md
+- .opencode/CURRENT_CONTEXT.md
+- .opencode/AGENTS.md
 
 **Key Features:**
-- Create/edit goals with name, target amount, deadline, account linkage
-- Manual contributions with ownership validation (max 20% of target per contribution)
-- Progress visualization with SVG circular progress (25%, 50%, 75%, 100% milestones)
-- Milestone toast notifications on goal completion milestones
-- Monthly savings calculation and projected completion date
-- Account linking with automatic balance updates on contribution
-- Soft delete support (deletedAt field)
-- Full TypeScript type coverage (NO any types)
-- Security: userId ownership validation, input constraints, date validation
-- Mobile gestures: swipe-right to contribute, long-press for options, swipe-to-delete confirmation
-- Optimistic UI updates for immediate feedback
-- Loading/error states and confirmation dialogs
+- Debt analytics endpoints accept nested debt payloads instead of additional database fetches, keeping calculations and validation within shared helpers
+- Bounded analytics guardrails (`maxMonths`, debt array caps) ensure schedules and snowball projections terminate predictably
+- Debt UI surfaces infeasible/truncated states, total overview, and snowball ordering while exposing due-date clearing via `null`
+- Vitest wiring keeps API tests local to `@finance/api` without dragging in UI-only runners
 
 **Verification:**
-- Type-check PASS for all goal feature files (goal.ts, GoalsOverview.tsx, GoalCard.tsx, ContributeDialog.tsx, GoalForm.tsx, goals.tsx, GoalCard mobile, ContributeSheet.tsx)
-- All types properly defined and imported
-- No TypeScript errors in any goal-related code
-- Security audit completed with remediation notes
+- `pnpm --filter @finance/utils test -- calculations.test.ts` (cash flows and debt helpers now covered)
+- `pnpm --filter @finance/api test` (new Vitest suite exercises debt router analytics)
 
 **Known Limitations & TODOs:**
-- Goals feature complete, but full integration testing with live database pending MongoDB connection
-- Consider adding batch contribution feature (multiple accounts at once)
-- Consider adding goal sharing/collaborative features for group savings
-- Could add goal templates (e.g., "Vacation", "New Car") for quick setup
-- Consider adding goal progress charts over time
-- MongoDB not running (cannot test actual API calls with live data)
-- Manual testing requires dev server setup and MongoDB connection
+- Snowball calculator remains the simplest balance-first strategy; avalanche/simulation variants can be added later
+- Manual verification still requires a running MongoDB instance for CRUD + schedule preview + snowball flows
 
 **Next:**
-- Verify savings goals feature with dev server and live MongoDB connection
-- Consider adding comprehensive integration tests for goal procedures
-- Review and optimize circular progress component for better accessibility
-- Consider adding goal analytics/deep-dive view (progress over time, contribution trends)
-- Consider adding mobile-specific optimizations for large goal amounts
+- Phase 3.8 Multi-Currency & Polish (Week 14)
+- Continue Transaction list UI, notifications, and reports/exports planned later in Phase 3

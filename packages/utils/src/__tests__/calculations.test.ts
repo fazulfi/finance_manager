@@ -9,8 +9,47 @@ import {
   budgetSpentPercentage,
   portfolioGain,
   debtPayoff,
+  monthlyInterestAmount,
+  isDebtPayoffFeasible,
+  projectedDebtPayoffDate,
+  generateDebtPaymentSchedule,
+  calculateDebtSnowball,
   investmentGain,
 } from "../calculations";
+
+type PortfolioStock = Parameters<typeof portfolioGain>[0][number];
+type CalculationDebt = Parameters<typeof debtPayoff>[0];
+
+function createStock(overrides: Partial<PortfolioStock> = {}): PortfolioStock {
+  return {
+    id: "1",
+    ticker: "AAPL",
+    name: "Apple",
+    exchange: "NASDAQ",
+    quantity: 100,
+    avgBuyPrice: 100,
+    currentPrice: 110,
+    totalCost: 10000,
+    currentValue: 11000,
+    gain: 1000,
+    gainPercent: 10,
+    lastUpdated: new Date("2026-01-01T00:00:00.000Z"),
+    ...overrides,
+  };
+}
+
+function createDebt(overrides: Partial<CalculationDebt> = {}): CalculationDebt {
+  return {
+    id: "1",
+    name: "Credit Card",
+    type: "credit",
+    totalAmount: 100000,
+    interestRate: 10,
+    minPayment: 1000,
+    remaining: 100000,
+    ...overrides,
+  };
+}
 
 describe("calculations", () => {
   describe("budgetRemaining", () => {
@@ -76,142 +115,78 @@ describe("calculations", () => {
 
   describe("portfolioGain", () => {
     it("should calculate total gain from stocks", () => {
-      const stocks: any[] = [
-        {
-          id: "1",
-          ticker: "AAPL",
-          name: "Apple",
-          exchange: "NASDAQ",
-          quantity: 100,
-          avgBuyPrice: 100,
-          currentPrice: 110,
-          totalCost: 10000,
-          currentValue: 11000,
-          gain: 5000,
-          gainPercent: 10,
-          lastUpdated: new Date(),
-        },
-        {
+      const stocks: PortfolioStock[] = [
+        createStock({ gain: 5000 }),
+        createStock({
           id: "2",
           ticker: "GOOGL",
           name: "Google",
-          exchange: "NASDAQ",
           quantity: 50,
-          avgBuyPrice: 100,
           currentPrice: 80,
           totalCost: 5000,
           currentValue: 4000,
           gain: -2000,
           gainPercent: -5,
-          lastUpdated: new Date(),
-        },
+        }),
       ];
       expect(portfolioGain(stocks, "IDR")).toBe(3000);
     });
 
     it("should return zero for empty stocks array", () => {
-      const stocks: any[] = [];
+      const stocks: PortfolioStock[] = [];
       expect(portfolioGain(stocks, "USD")).toBe(0);
     });
 
     it("should handle all positive gains", () => {
-      const stocks: any[] = [
-        {
-          id: "1",
-          ticker: "AAPL",
-          name: "Apple",
-          exchange: "NASDAQ",
-          quantity: 100,
-          avgBuyPrice: 100,
-          currentPrice: 110,
-          totalCost: 10000,
-          currentValue: 11000,
-          gain: 1000,
-          gainPercent: 10,
-          lastUpdated: new Date(),
-        },
-        {
+      const stocks: PortfolioStock[] = [
+        createStock(),
+        createStock({
           id: "2",
           ticker: "GOOGL",
           name: "Google",
-          exchange: "NASDAQ",
           quantity: 50,
-          avgBuyPrice: 100,
           currentPrice: 120,
           totalCost: 5000,
           currentValue: 6000,
           gain: 2000,
           gainPercent: 20,
-          lastUpdated: new Date(),
-        },
+        }),
       ];
       expect(portfolioGain(stocks, "EUR")).toBe(3000);
     });
 
     it("should handle all negative losses", () => {
-      const stocks: any[] = [
-        {
-          id: "1",
-          ticker: "AAPL",
-          name: "Apple",
-          exchange: "NASDAQ",
-          quantity: 100,
-          avgBuyPrice: 100,
-          currentPrice: 95,
-          totalCost: 10000,
-          currentValue: 9500,
-          gain: -500,
-          gainPercent: -5,
-          lastUpdated: new Date(),
-        },
-        {
+      const stocks: PortfolioStock[] = [
+        createStock({ currentPrice: 95, currentValue: 9500, gain: -500, gainPercent: -5 }),
+        createStock({
           id: "2",
           ticker: "GOOGL",
           name: "Google",
-          exchange: "NASDAQ",
           quantity: 50,
-          avgBuyPrice: 100,
           currentPrice: 90,
           totalCost: 5000,
           currentValue: 4500,
           gain: -1000,
           gainPercent: -10,
-          lastUpdated: new Date(),
-        },
+        }),
       ];
       expect(portfolioGain(stocks, "USD")).toBe(-1500);
     });
 
     it("should ignore currency parameter in calculation", () => {
-      const stocks: any[] = [
-        {
-          id: "1",
-          ticker: "AAPL",
-          name: "Apple",
-          exchange: "NASDAQ",
-          quantity: 100,
-          avgBuyPrice: 100,
-          currentPrice: 110,
-          totalCost: 10000,
-          currentValue: 11000,
-          gain: 1000,
-          gainPercent: 10,
-          lastUpdated: new Date(),
-        },
-        {
+      const stocks: PortfolioStock[] = [
+        createStock(),
+        createStock({
           id: "2",
           ticker: "GOOGL",
           name: "Google",
-          exchange: "NASDAQ",
           quantity: 50,
-          avgBuyPrice: 100,
           currentPrice: 120,
           totalCost: 5000,
           currentValue: 6000,
           gain: 2000,
           gainPercent: 20,
-          lastUpdated: new Date(),
-        },
+        }),
       ];
       expect(portfolioGain(stocks, "USD")).toBe(3000);
       expect(portfolioGain(stocks, "EUR")).toBe(3000);
@@ -220,123 +195,222 @@ describe("calculations", () => {
 
   describe("debtPayoff", () => {
     it("should calculate months to payoff with payment", () => {
-      const debt: any = {
-        id: "1",
-        name: "Credit Card",
-        type: "credit",
-        totalAmount: 100000,
-        interestRate: 10, // 10% annual rate
-        minPayment: 1000,
-        remaining: 100000,
-      };
-      expect(debtPayoff(debt, 2000)).toBe(53);
+      const debt = createDebt();
+      expect(debtPayoff(debt, 2000)).toBe(65);
     });
 
     it("should use minPayment when not provided", () => {
-      const debt: any = {
-        id: "1",
-        name: "Credit Card",
-        type: "credit",
-        totalAmount: 100000,
-        interestRate: 10,
-        minPayment: 1000,
-        remaining: 100000,
-      };
-      expect(debtPayoff(debt)).toBe(100); // 100,000 / 1,000 = 100 months
+      const debt = createDebt();
+      expect(debtPayoff(debt)).toBe(216);
     });
 
     it("should return 0 for zero debt", () => {
-      const debt: any = {
-        id: "1",
-        name: "Credit Card",
-        type: "credit",
-        totalAmount: 0,
-        interestRate: 10,
-        minPayment: 1000,
-        remaining: 0,
-      };
+      const debt = createDebt({ totalAmount: 0, remaining: 0 });
       expect(debtPayoff(debt, 1000)).toBe(0);
     });
 
     it("should return Infinity for zero payment", () => {
-      const debt: any = {
-        id: "1",
-        name: "Credit Card",
-        type: "credit",
-        totalAmount: 100000,
-        interestRate: 10,
-        minPayment: 1000,
-        remaining: 100000,
-      };
+      const debt = createDebt();
       expect(debtPayoff(debt, 0)).toBe(Infinity);
     });
 
     it("should return 0 for zero remaining", () => {
-      const debt: any = {
-        id: "1",
-        name: "Credit Card",
-        type: "credit",
-        totalAmount: 100000,
-        interestRate: 10,
-        minPayment: 1000,
-        remaining: 0,
-      };
+      const debt = createDebt({ remaining: 0 });
       expect(debtPayoff(debt, 1000)).toBe(0);
     });
 
     it("should handle no interest rate", () => {
-      const debt: any = {
-        id: "1",
-        name: "Credit Card",
-        type: "credit",
-        totalAmount: 100000,
-        interestRate: 0,
-        minPayment: 1000,
-        remaining: 100000,
-      };
+      const debt = createDebt({ interestRate: 0 });
       expect(debtPayoff(debt, 1000)).toBe(100); // 100,000 / 1,000
     });
 
     it("should handle high interest rate (109 months)", () => {
-      const debt: any = {
-        id: "1",
-        name: "Credit Card",
-        type: "credit",
-        totalAmount: 100000,
-        interestRate: 20, // 20% annual rate
-        minPayment: 1000,
-        remaining: 100000,
-      };
+      const debt = createDebt({ interestRate: 20 });
       const months = debtPayoff(debt, 2000);
       expect(months).toBe(109);
     });
 
     it("should handle low interest rate (53 months)", () => {
-      const debt: any = {
-        id: "1",
-        name: "Credit Card",
-        type: "credit",
-        totalAmount: 100000,
-        interestRate: 2, // 2% annual rate
-        minPayment: 1000,
-        remaining: 100000,
-      };
+      const debt = createDebt({ interestRate: 2 });
       const months = debtPayoff(debt, 2000);
       expect(months).toBe(53);
     });
 
     it("should handle very low interest rate (51 months)", () => {
-      const debt: any = {
-        id: "1",
-        name: "Credit Card",
-        type: "credit",
-        totalAmount: 100000,
-        interestRate: 0.1, // Very low
-        minPayment: 1000,
-        remaining: 100000,
-      };
+      const debt = createDebt({ interestRate: 0.1 });
       const months = debtPayoff(debt, 2000);
       expect(months).toBe(51);
+    });
+
+    it("should return Infinity when payment does not beat monthly interest", () => {
+      const debt = createDebt({
+        totalAmount: 1000,
+        interestRate: 24,
+        minPayment: 20,
+        remaining: 1000,
+      });
+
+      expect(monthlyInterestAmount(debt)).toBe(20);
+      expect(isDebtPayoffFeasible(debt)).toBe(false);
+      expect(debtPayoff(debt)).toBe(Infinity);
+      expect(projectedDebtPayoffDate(debt)).toBeNull();
+    });
+  });
+
+  describe("debt analytics helpers", () => {
+    it("should generate a zero-interest schedule", () => {
+      const startDate = new Date("2026-01-01T00:00:00.000Z");
+      const debt = createDebt({
+        name: "Family Loan",
+        type: "personal",
+        totalAmount: 1200,
+        interestRate: 0,
+        minPayment: 300,
+        remaining: 1200,
+      });
+
+      const result = generateDebtPaymentSchedule(debt, 300, { startDate });
+
+      expect(result.isPayoffFeasible).toBe(true);
+      expect(result.truncated).toBe(false);
+      expect(result.monthsToPayoff).toBe(4);
+      expect(result.totalInterest).toBe(0);
+      expect(result.schedule).toHaveLength(4);
+      expect(result.schedule[0]).toMatchObject({
+        month: 1,
+        payment: 300,
+        interest: 0,
+        principal: 300,
+        balance: 900,
+      });
+      expect(result.schedule[3]).toMatchObject({
+        month: 4,
+        payment: 300,
+        interest: 0,
+        principal: 300,
+        balance: 0,
+      });
+      expect(result.payoffDate?.toISOString()).toBe("2026-05-01T00:00:00.000Z");
+    });
+
+    it("should generate a standard amortization schedule", () => {
+      const debt = createDebt({
+        name: "Car Loan",
+        type: "loan",
+        totalAmount: 1000,
+        interestRate: 12,
+        minPayment: 100,
+        remaining: 1000,
+      });
+
+      const result = generateDebtPaymentSchedule(debt, 100, {
+        startDate: new Date("2026-01-01T00:00:00.000Z"),
+      });
+
+      expect(result.truncated).toBe(false);
+      expect(result.monthsToPayoff).toBe(11);
+      expect(result.totalInterest).toBe(58.98);
+      expect(result.totalPaid).toBe(1058.98);
+      expect(result.schedule[0]).toMatchObject({
+        month: 1,
+        payment: 100,
+        interest: 10,
+        principal: 90,
+        balance: 910,
+      });
+      expect(result.schedule[10]).toMatchObject({
+        month: 11,
+        payment: 58.98,
+        interest: 0.58,
+        principal: 58.4,
+        balance: 0,
+      });
+    });
+
+    it("should return an impossible payoff result when payment is too low", () => {
+      const debt = createDebt({
+        name: "Store Card",
+        totalAmount: 500,
+        interestRate: 24,
+        minPayment: 10,
+        remaining: 500,
+      });
+
+      const result = generateDebtPaymentSchedule(debt, 10);
+
+      expect(result.isPayoffFeasible).toBe(false);
+      expect(result.monthsToPayoff).toBeNull();
+      expect(result.payoffDate).toBeNull();
+      expect(result.schedule).toEqual([]);
+    });
+
+    it("should honor schedule bounds and mark truncation", () => {
+      const debt = createDebt({
+        name: "Student Loan",
+        type: "loan",
+        totalAmount: 1000,
+        interestRate: 12,
+        minPayment: 100,
+        remaining: 1000,
+      });
+
+      const result = generateDebtPaymentSchedule(debt, 100, { maxMonths: 3 });
+
+      expect(result.schedule).toHaveLength(3);
+      expect(result.truncated).toBe(true);
+      expect(result.monthsToPayoff).toBeNull();
+      expect(result.payoffDate).toBeNull();
+      expect(result.schedule[2]?.balance).toBe(727.29);
+    });
+
+    it("should order debts by snowball priority and project payoff", () => {
+      const startDate = new Date("2026-01-01T00:00:00.000Z");
+      const debts: CalculationDebt[] = [
+        createDebt({
+          id: "car",
+          name: "Car Loan",
+          type: "loan",
+          totalAmount: 1000,
+          interestRate: 0,
+          minPayment: 100,
+          remaining: 1000,
+        }),
+        createDebt({
+          id: "card",
+          totalAmount: 300,
+          interestRate: 0,
+          minPayment: 50,
+          remaining: 300,
+        }),
+      ];
+
+      const result = calculateDebtSnowball(debts, 50, { startDate });
+
+      expect(result.orderedDebtIds).toEqual(["card", "car"]);
+      expect(result.truncated).toBe(false);
+      expect(result.totalMonths).toBe(7);
+      expect(result.totalInterest).toBe(0);
+      expect(result.totalPaid).toBe(1300);
+      expect(result.debts).toEqual([
+        {
+          debtId: "card",
+          name: "Credit Card",
+          order: 1,
+          monthsToPayoff: 3,
+          payoffDate: new Date("2026-04-01T00:00:00.000Z"),
+          totalInterest: 0,
+          totalPaid: 300,
+        },
+        {
+          debtId: "car",
+          name: "Car Loan",
+          order: 2,
+          monthsToPayoff: 7,
+          payoffDate: new Date("2026-08-01T00:00:00.000Z"),
+          totalInterest: 0,
+          totalPaid: 1000,
+        },
+      ]);
     });
   });
 

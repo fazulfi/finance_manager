@@ -42,6 +42,294 @@ interface Debt {
   dueDate?: Date;
 }
 
+export interface DebtPaymentScheduleRow {
+  month: number;
+  date: Date;
+  payment: number;
+  interest: number;
+  principal: number;
+  balance: number;
+}
+
+export interface DebtPaymentScheduleResult {
+  schedule: DebtPaymentScheduleRow[];
+  truncated: boolean;
+  isPayoffFeasible: boolean;
+  monthsToPayoff: number | null;
+  payoffDate: Date | null;
+  totalInterest: number;
+  totalPaid: number;
+}
+
+export interface DebtSnowballItem {
+  debtId: string;
+  name: string;
+  order: number;
+  monthsToPayoff: number | null;
+  payoffDate: Date | null;
+  totalInterest: number;
+  totalPaid: number;
+}
+
+export interface DebtSnowballResult {
+  debts: DebtSnowballItem[];
+  orderedDebtIds: string[];
+  totalMonths: number | null;
+  totalInterest: number;
+  totalPaid: number;
+  truncated: boolean;
+}
+
+const DEFAULT_SCHEDULE_MONTH_LIMIT = 600;
+
+function normalizeMaxMonths(maxMonths?: number): number {
+  if (maxMonths === undefined || !Number.isFinite(maxMonths)) {
+    return DEFAULT_SCHEDULE_MONTH_LIMIT;
+  }
+
+  return Math.min(Math.max(1, Math.floor(maxMonths)), DEFAULT_SCHEDULE_MONTH_LIMIT);
+}
+
+function roundCurrency(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function addMonths(baseDate: Date, months: number): Date {
+  const date = new Date(baseDate);
+  date.setMonth(date.getMonth() + months);
+  return date;
+}
+
+function sortDebtsForSnowball<T extends Debt>(debts: T[]): T[] {
+  return [...debts].sort(
+    (a, b) =>
+      a.remaining - b.remaining ||
+      a.interestRate - b.interestRate ||
+      a.name.localeCompare(b.name) ||
+      a.id.localeCompare(b.id),
+  );
+}
+
+export function monthlyInterestAmount(debt: Debt, balance = debt.remaining): number {
+  if (balance <= 0 || debt.interestRate <= 0) {
+    return 0;
+  }
+
+  return roundCurrency(balance * (debt.interestRate / 12 / 100));
+}
+
+export function isDebtPayoffFeasible(debt: Debt, monthlyPayment = debt.minPayment): boolean {
+  if (debt.remaining <= 0) {
+    return true;
+  }
+
+  if (monthlyPayment <= 0) {
+    return false;
+  }
+
+  if (debt.interestRate <= 0) {
+    return true;
+  }
+
+  return monthlyPayment > monthlyInterestAmount(debt);
+}
+
+export function projectedDebtPayoffDate(
+  debt: Debt,
+  monthlyPayment?: number,
+  startDate = new Date(),
+): Date | null {
+  const months = debtPayoff(debt, monthlyPayment);
+
+  if (!Number.isFinite(months)) {
+    return null;
+  }
+
+  return addMonths(startDate, months);
+}
+
+export function generateDebtPaymentSchedule(
+  debt: Debt,
+  monthlyPayment = debt.minPayment,
+  options?: {
+    startDate?: Date;
+    maxMonths?: number;
+  },
+): DebtPaymentScheduleResult {
+  const startDate = options?.startDate ?? new Date();
+  const maxMonths = normalizeMaxMonths(options?.maxMonths);
+
+  if (debt.remaining <= 0) {
+    return {
+      schedule: [],
+      truncated: false,
+      isPayoffFeasible: true,
+      monthsToPayoff: 0,
+      payoffDate: startDate,
+      totalInterest: 0,
+      totalPaid: 0,
+    };
+  }
+
+  if (!isDebtPayoffFeasible(debt, monthlyPayment)) {
+    return {
+      schedule: [],
+      truncated: false,
+      isPayoffFeasible: false,
+      monthsToPayoff: null,
+      payoffDate: null,
+      totalInterest: 0,
+      totalPaid: 0,
+    };
+  }
+
+  const schedule: DebtPaymentScheduleRow[] = [];
+  let balance = roundCurrency(debt.remaining);
+  let totalInterest = 0;
+  let totalPaid = 0;
+
+  for (let month = 1; month <= maxMonths && balance > 0; month += 1) {
+    const interest = monthlyInterestAmount(debt, balance);
+    const payment = roundCurrency(Math.min(monthlyPayment, balance + interest));
+    const principal = roundCurrency(payment - interest);
+    balance = roundCurrency(Math.max(0, balance - principal));
+    totalInterest = roundCurrency(totalInterest + interest);
+    totalPaid = roundCurrency(totalPaid + payment);
+
+    schedule.push({
+      month,
+      date: addMonths(startDate, month),
+      payment,
+      interest,
+      principal,
+      balance,
+    });
+  }
+
+  const truncated = balance > 0;
+  const monthsToPayoff = truncated ? null : schedule.length;
+
+  return {
+    schedule,
+    truncated,
+    isPayoffFeasible: true,
+    monthsToPayoff,
+    payoffDate: monthsToPayoff === null ? null : addMonths(startDate, monthsToPayoff),
+    totalInterest,
+    totalPaid,
+  };
+}
+
+export function calculateDebtSnowball(
+  debts: Debt[],
+  extraPayment = 0,
+  options?: {
+    startDate?: Date;
+    maxMonths?: number;
+  },
+): DebtSnowballResult {
+  const startDate = options?.startDate ?? new Date();
+  const maxMonths = normalizeMaxMonths(options?.maxMonths);
+  const orderedDebts = sortDebtsForSnowball(debts.filter((debt) => debt.remaining > 0));
+
+  if (orderedDebts.length === 0) {
+    return {
+      debts: [],
+      orderedDebtIds: [],
+      totalMonths: 0,
+      totalInterest: 0,
+      totalPaid: 0,
+      truncated: false,
+    };
+  }
+
+  const state = orderedDebts.map((debt, index) => ({
+    ...debt,
+    order: index + 1,
+    balance: roundCurrency(debt.remaining),
+    totalInterest: 0,
+    totalPaid: 0,
+    monthsToPayoff: null as number | null,
+    payoffDate: null as Date | null,
+  }));
+  const totalMonthlyBudget = roundCurrency(
+    state.reduce((sum, debt) => sum + debt.minPayment, 0) + Math.max(0, extraPayment),
+  );
+
+  for (let month = 1; month <= maxMonths; month += 1) {
+    const activeDebts = state.filter((debt) => debt.balance > 0);
+
+    if (activeDebts.length === 0) {
+      break;
+    }
+
+    const monthState = sortDebtsForSnowball(activeDebts);
+    const balanceWithInterest = new Map<string, number>();
+    let paymentPool = totalMonthlyBudget;
+
+    for (const debt of monthState) {
+      const interest = monthlyInterestAmount(debt, debt.balance);
+      const accruedBalance = roundCurrency(debt.balance + interest);
+
+      debt.totalInterest = roundCurrency(debt.totalInterest + interest);
+      balanceWithInterest.set(debt.id, accruedBalance);
+    }
+
+    for (const debt of monthState) {
+      const accruedBalance = balanceWithInterest.get(debt.id) ?? 0;
+      const minimumPayment = roundCurrency(Math.min(debt.minPayment, accruedBalance));
+
+      debt.totalPaid = roundCurrency(debt.totalPaid + minimumPayment);
+      balanceWithInterest.set(debt.id, roundCurrency(accruedBalance - minimumPayment));
+      paymentPool = roundCurrency(paymentPool - minimumPayment);
+    }
+
+    for (const debt of monthState) {
+      if (paymentPool <= 0) {
+        break;
+      }
+
+      const remainingBalance = balanceWithInterest.get(debt.id) ?? 0;
+      if (remainingBalance <= 0) {
+        continue;
+      }
+
+      const extra = roundCurrency(Math.min(paymentPool, remainingBalance));
+      debt.totalPaid = roundCurrency(debt.totalPaid + extra);
+      balanceWithInterest.set(debt.id, roundCurrency(remainingBalance - extra));
+      paymentPool = roundCurrency(paymentPool - extra);
+    }
+
+    for (const debt of monthState) {
+      debt.balance = balanceWithInterest.get(debt.id) ?? 0;
+
+      if (debt.balance === 0 && debt.monthsToPayoff === null) {
+        debt.monthsToPayoff = month;
+        debt.payoffDate = addMonths(startDate, month);
+      }
+    }
+  }
+
+  const truncated = state.some((debt) => debt.balance > 0);
+
+  return {
+    debts: state.map((debt) => ({
+      debtId: debt.id,
+      name: debt.name,
+      order: debt.order,
+      monthsToPayoff: debt.monthsToPayoff,
+      payoffDate: debt.payoffDate,
+      totalInterest: roundCurrency(debt.totalInterest),
+      totalPaid: roundCurrency(debt.totalPaid),
+    })),
+    orderedDebtIds: state.map((debt) => debt.id),
+    totalMonths: truncated ? null : Math.max(...state.map((debt) => debt.monthsToPayoff ?? 0)),
+    totalInterest: roundCurrency(state.reduce((sum, debt) => sum + debt.totalInterest, 0)),
+    totalPaid: roundCurrency(state.reduce((sum, debt) => sum + debt.totalPaid, 0)),
+    truncated,
+  };
+}
+
 /**
  * Calculates the remaining budget amount
  *
@@ -147,14 +435,12 @@ export function debtPayoff(debt: Debt, monthlyPayment?: number): number {
     return Math.ceil(principal / payment);
   }
 
+  if (!isDebtPayoffFeasible(debt, payment)) {
+    return Infinity;
+  }
+
   // Convert annual rate to monthly rate (percentage to decimal)
   const r = annualRate / 12 / 100;
-
-  // Avoid division by zero in the log calculation
-  if (payment * r >= principal) {
-    // Payment covers all principal, no amortization needed
-    return Math.ceil(principal / payment);
-  }
 
   // Amortization formula
   const n = -Math.log(1 - (r * principal) / payment) / Math.log(1 + r);
