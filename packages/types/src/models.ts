@@ -243,3 +243,34 @@ export interface BudgetItem {
   isProject?: boolean; // Marks if this budget item is for a project
   spent: number;
 }
+
+/**
+ * Watchlist model — Stocks user is watching (not necessarily owned)
+ */
+export interface Watchlist {
+  id: string; // MongoDB ObjectId
+  userId: string; // Foreign key (ObjectId)
+  stockId: string; // Foreign key (ObjectId)
+  addedAt: Date;
+
+  // Relations
+  user: User;
+  stock: Stock;
+}
+
+/**
+ * PriceAlert model — Notifications when stock reaches target price
+ */
+export interface PriceAlert {
+  id: string; // MongoDB ObjectId
+  userId: string; // Foreign key (ObjectId)
+  stockId: string; // Foreign key (ObjectId)
+  targetPrice: number;
+  notified: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Relations
+  user: User;
+  stock: Stock;
+}

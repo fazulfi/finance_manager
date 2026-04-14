@@ -2,6 +2,7 @@ import { accountRouter } from "./routers/account.js";
 import { authRouter } from "./routers/auth.js";
 import { budgetRouter } from "./routers/budget.js";
 import { categoryRouter } from "./routers/category.js";
+import { dashboardRouter } from "./routers/dashboard.js";
 import { debtRouter } from "./routers/debt.js";
 import { goalRouter } from "./routers/goal.js";
 import { investmentRouter } from "./routers/investment.js";
@@ -21,6 +22,7 @@ export const appRouter = router({
   investment: investmentRouter,
   goal: goalRouter,
   debt: debtRouter,
+  dashboard: dashboardRouter,
 });
 
 export type AppRouter = typeof appRouter;

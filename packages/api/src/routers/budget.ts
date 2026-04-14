@@ -145,31 +145,27 @@ export const budgetRouter = router({
   getProgress: protectedProcedure
     .input(z.object({ id: objectId }))
     .query(async ({ ctx, input }) => {
-      // Mitigation for race condition: fetch both budget and transactions in parallel
-      // If budget is not found after transaction fetch, throw NOT_FOUND
-      // In MongoDB, we can't have true atomic transactions, but this re-fetch pattern
-      // reduces the probability of returning stale budget data.
-      const [budget, transactions] = await Promise.all([
-        ctx.db.budget.findFirst({
-          where: { id: input.id, userId: ctx.session.user.id },
-          select: { items: true, startDate: true, endDate: true },
-        }),
-        ctx.db.transaction.findMany({
-          where: {
-            userId: ctx.session.user.id,
-            type: "EXPENSE",
-            date: {
-              gte: new Date(), // Use current date as fallback if budget.startDate is missing
-              lte: new Date(),
-            },
-          },
-          select: { category: true, amount: true },
-        }),
-      ]);
+      // Fetch budget first so we can use its date range for the transaction query
+      const budget = await ctx.db.budget.findFirst({
+        where: { id: input.id, userId: ctx.session.user.id },
+        select: { items: true, startDate: true, endDate: true },
+      });
 
       if (!budget) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Budget not found" });
       }
+
+      const transactions = await ctx.db.transaction.findMany({
+        where: {
+          userId: ctx.session.user.id,
+          type: "EXPENSE",
+          date: {
+            gte: budget.startDate,
+            lte: budget.endDate ?? new Date(),
+          },
+        },
+        select: { category: true, amount: true },
+      });
 
       // Build a category → total spent map in memory (noUncheckedIndexedAccess safe via ?? 0)
       const spentMap: Record<string, number> = {};
@@ -242,34 +238,33 @@ export const budgetRouter = router({
   getBudgetStatus: protectedProcedure
     .input(z.object({ id: objectId }))
     .query(async ({ ctx, input }) => {
-      // Mitigation for race condition: fetch both budget and transactions in parallel
-      const [budget, transactions] = await Promise.all([
-        ctx.db.budget.findFirst({
-          where: { id: input.id, userId: ctx.session.user.id },
-          select: {
-            id: true,
-            name: true,
-            items: true,
-            startDate: true,
-            endDate: true,
-          },
-        }),
-        ctx.db.transaction.findMany({
-          where: {
-            userId: ctx.session.user.id,
-            type: "EXPENSE",
-            date: {
-              gte: new Date(), // Use current date as fallback if budget.startDate is missing
-              lte: new Date(),
-            },
-          },
-          select: { category: true, amount: true },
-        }),
-      ]);
+      // Fetch budget first so we can use its date range for the transaction query
+      const budget = await ctx.db.budget.findFirst({
+        where: { id: input.id, userId: ctx.session.user.id },
+        select: {
+          id: true,
+          name: true,
+          items: true,
+          startDate: true,
+          endDate: true,
+        },
+      });
 
       if (!budget) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Budget not found" });
       }
+
+      const transactions = await ctx.db.transaction.findMany({
+        where: {
+          userId: ctx.session.user.id,
+          type: "EXPENSE",
+          date: {
+            gte: budget.startDate,
+            lte: budget.endDate ?? new Date(),
+          },
+        },
+        select: { category: true, amount: true },
+      });
 
       const totalBudgeted = budget.items.reduce(
         (sum: number, item: { budgeted: number }) => sum + item.budgeted,

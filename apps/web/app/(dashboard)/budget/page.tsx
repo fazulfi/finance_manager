@@ -2,7 +2,6 @@
 // Budget page Server Component - displays all budgets with overview and management
 
 import type { Metadata } from "next";
-import { auth } from "@/auth";
 import { BudgetOverview } from "@/components/budget/BudgetOverview";
 import Link from "next/link";
 import { Plus } from "lucide-react";
@@ -14,9 +13,6 @@ export const metadata: Metadata = {
 };
 
 export default async function BudgetPage(): Promise<React.JSX.Element> {
-  // Get session from NextAuth v5 auth() function
-  const session = await auth();
-
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       {/* Page Header */}

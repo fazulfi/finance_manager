@@ -118,6 +118,7 @@ model User {
   projects     Project[]
   budgets      Budget[]
   stocks       Stock[]
+  dividends    Dividend[]
   investments  Investment[]
   savingsGoals SavingsGoal[]
   debts        Debt[]
@@ -263,11 +264,61 @@ model Stock {
   updatedAt    DateTime @updatedAt
 
   // Relations
-  user User @relation(fields: [userId], references: [id])
+  user            User            @relation(fields: [userId], references: [id])
+  watchlists      Watchlist[]
+  priceAlerts     PriceAlert[]
+  dividends       Dividend[]
 
   @@index([userId])
   @@index([userId, ticker])
   @@map("stocks")
+}
+
+model Dividend {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  stockId   String   @db.ObjectId
+  amount    Float
+  date      DateTime
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id])
+  stock Stock @relation(fields: [stockId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([stockId])
+  @@index([userId, date])
+  @@map("dividends")
+}
+
+model Watchlist {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  stockId   String
+  addedAt   DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stock     Stock    @relation(fields: [stockId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, stockId])
+  @@index([userId])
+  @@map("watchlists")
+}
+
+model PriceAlert {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String   @db.ObjectId
+  stockId      String
+  targetPrice  Float
+  notified     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stock        Stock    @relation(fields: [stockId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("price_alerts")
 }
 
 model Investment {

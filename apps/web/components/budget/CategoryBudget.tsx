@@ -40,7 +40,7 @@ function CategoryBudgetCard({ category }: CategoryBudgetProps): React.JSX.Elemen
         <CardContent>
           <div className="space-y-3">
             <BudgetProgress
-              budget={categoryBudget || (category as unknown as any)}
+              budget={null}
               spent={0}
               totalBudgeted={category.type === CategoryType.INCOME ? 0 : 0}
             />
@@ -65,7 +65,7 @@ function CategoryBudgetCard({ category }: CategoryBudgetProps): React.JSX.Elemen
         <CardContent>
           <div className="space-y-3">
             <BudgetProgress
-              budget={categoryBudget || (category as unknown as any)}
+              budget={null}
               spent={0}
               totalBudgeted={0}
             />

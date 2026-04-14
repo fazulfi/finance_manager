@@ -1,17 +1,15 @@
 "use client";
 
-import { type Budget } from "@finance/types";
 import { cn } from "@finance/ui";
 
 interface BudgetProgressProps {
-  budget: unknown;
+  budget?: unknown;
   spent: number;
   totalBudgeted: number;
   remaining?: number;
 }
 
 function BudgetProgress({
-  budget,
   spent,
   totalBudgeted,
   remaining,

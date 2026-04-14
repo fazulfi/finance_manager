@@ -1,10 +1,5 @@
-import { SafeAreaView } from "react-native";
-import { Text } from "react-native";
+import { Dashboard } from "../../components/dashboard/Dashboard";
 
-export default function HomeScreen(): React.JSX.Element {
-  return (
-    <SafeAreaView className="flex-1 items-center justify-center bg-background">
-      <Text className="text-2xl font-semibold text-foreground">Home</Text>
-    </SafeAreaView>
-  );
+export default function TabLayout() {
+  return <Dashboard />;
 }

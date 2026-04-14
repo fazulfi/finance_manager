@@ -38,7 +38,7 @@ function ProjectBudgetCard({ project }: ProjectBudgetProps): React.JSX.Element {
         <CardContent>
           <div className="space-y-3">
             <BudgetProgress
-              budget={projectBudget || (project as unknown as any)}
+              budget={null}
               spent={project.spent || 0}
               totalBudgeted={project.budget || 0}
             />
@@ -63,7 +63,7 @@ function ProjectBudgetCard({ project }: ProjectBudgetProps): React.JSX.Element {
         <CardContent>
           <div className="space-y-3">
             <BudgetProgress
-              budget={projectBudget || (project as unknown as any)}
+              budget={null}
               spent={project.spent || 0}
               totalBudgeted={project.budget || 0}
             />

@@ -12,6 +12,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "victory-native": "^36.0.11",
     "@expo/vector-icons": "^14.1.0",
     "@finance/api": "workspace:*",
     "@finance/types": "workspace:*",

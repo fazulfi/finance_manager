@@ -325,6 +325,89 @@ export const transactionRouter = router({
     // Soft delete — don't restore balances (by design)
     await ctx.db.transaction.update({
       where: { id: input.id, userId: ctx.session.user.id },
+      data: { isRecurring: false },
+    });
+    return { success: true };
+  }),
+
+  dashboardStats: protectedProcedure
+    .input(
+      z.object({
+        dateFrom: z.date().optional(),
+        dateTo: z.date().optional(),
+        accountId: objectId.optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const baseWhere = {
+        userId,
+        date: {
+          gte: input.dateFrom ?? new Date(0),
+          lte: input.dateTo ?? new Date(),
+        },
+        ...(input.accountId !== undefined && { accountId: input.accountId }),
+      };
+
+      // Aggregate income and expenses using map-reduce on transactions
+      const transactions = await ctx.db.transaction.findMany({
+        where: baseWhere,
+        orderBy: { date: "desc" },
+      });
+
+      const totals = transactions.reduce(
+        (acc, t) => {
+          if (t.type === "INCOME") {
+            acc.totalIncome += t.amount;
+          } else if (t.type === "EXPENSE") {
+            acc.totalExpense += t.amount;
+          } else if (t.type === "TRANSFER") {
+            acc.totalTransfer += t.amount;
+          }
+          return acc;
+        },
+        { totalIncome: 0, totalExpense: 0, totalTransfer: 0 },
+      );
+
+      const netCashFlow = totals.totalIncome - totals.totalExpense;
+
+      return {
+        totalIncome: totals.totalIncome,
+        totalExpense: totals.totalExpense,
+        netCashFlow,
+        transactionCount: transactions.length,
+        categories: transactions.reduce(
+          (acc, t) => {
+            if (t.category) {
+              if (!acc[t.category]) {
+                acc[t.category] = { expense: 0, income: 0 };
+              }
+              if (t.type === "EXPENSE") {
+                acc[t.category].expense += t.amount;
+              } else if (t.type === "INCOME") {
+                acc[t.category].income += t.amount;
+              }
+            }
+            return acc;
+          },
+          {} as Record<string, { expense: number; income: number }>,
+        ),
+      };
+    }),
+
+  delete: protectedProcedure.input(z.object({ id: objectId })).mutation(async ({ ctx, input }) => {
+    const existing = await ctx.db.transaction.findFirst({
+      where: { id: input.id, userId: ctx.session.user.id },
+    });
+    if (!existing) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Transaction not found",
+      });
+    }
+    // Soft delete — don't restore balances (by design)
+    await ctx.db.transaction.update({
+      where: { id: input.id, userId: ctx.session.user.id },
       data: { isRecurring: false } as Parameters<typeof ctx.db.transaction.update>[0]["data"], // Stop recurring transactions on delete
     });
     return { success: true };
@@ -574,6 +657,42 @@ export const transactionRouter = router({
 
         return { count: created.count };
       });
+    }),
+
+  bulkDelete: protectedProcedure
+    .input(z.array(objectId).max(100, { message: "Maximum 100 transactions per request" }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const where = {
+        id: { in: input },
+        userId,
+      };
+
+      const result = await ctx.db.transaction.updateMany({
+        where,
+        data: { isRecurring: false },
+      });
+
+      return { count: result.count };
+    }),
+
+  bulkDelete: protectedProcedure
+    .input(z.array(objectId).max(100, { message: "Maximum 100 transactions per request" }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const where = {
+        id: { in: input },
+        userId,
+      };
+
+      const result = await ctx.db.transaction.updateMany({
+        where,
+        data: { isRecurring: false },
+      });
+
+      return { count: result.count };
     }),
 
   bulkDelete: protectedProcedure

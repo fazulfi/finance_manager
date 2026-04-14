@@ -5,10 +5,11 @@
     "declaration": false,
     "declarationMap": false,
     "paths": {
-      "@/*": ["./src/*"],
+      "@/*": ["./components/*", "./app/*"],
       "@finance/types": ["../../packages/types/src/index.ts"],
       "@finance/utils": ["../../packages/utils/src/index.ts"],
       "@finance/api": ["../../packages/api/src/index.ts"],
+      "@finance/api/react": ["../../packages/api/src/react.tsx"],
       "@finance/db": ["../../packages/db/src/index.ts"]
     },
     "types": ["nativewind/types"]

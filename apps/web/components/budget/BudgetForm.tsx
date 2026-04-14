@@ -6,7 +6,6 @@ import {
   Button,
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   Input,
@@ -21,9 +20,8 @@ import {
 } from "@finance/ui";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Controller, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { BudgetProgress } from "./BudgetProgress";
 
 const budgetFormSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name too long"),
@@ -155,7 +153,6 @@ export function BudgetForm({
 
   // Calculate budget summary
   const totalBudgeted = form.watch("items").reduce((sum, item) => sum + item.budgeted, 0);
-  const totalSpent = 0; // Need actual spent amounts from API
 
   const addItem = () => {
     const items = form.getValues("items");

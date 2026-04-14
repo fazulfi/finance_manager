@@ -5,6 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Week 6: Dashboard & Analytics (2026-04-14)
+
+**Features Implemented:**
+
+- Comprehensive web dashboard with analytics
+- 5 chart types: Income vs Expense (line), Category Breakdown (pie), Budget Progress (horizontal bars), Cash Flow (area), Recent Transactions (list)
+- Overview cards: Total Balance, Net Cash Flow, Income, Expense
+- Date range, account, category filters with debouncing
+- Quick actions: Add Transaction, Transfer, View Budgets, View Projects
+- Mobile simplified dashboard with Victory Native charts
+- Swipeable stat cards, pull-to-refresh transactions list
+- Haptic feedback for interactions
+
+**Components Created:**
+
+- Shared types: `packages/types/src/dashboard.ts` (ChartRange, DashboardFilterInput, ChartDataPoint, DashboardAnalyticsOutput)
+- Utilities: `packages/utils/src/charts.ts` (formatDateRanges, groupByCategory, aggregateChartData, calculateBudgetProgress, calculateCashFlow)
+- Web components (9): Dashboard.tsx, StatCard.tsx, Filters.tsx, IncomeExpenseChart.tsx, CategoryBreakdown.tsx, BudgetProgressChart.tsx, CashFlowChart.tsx, RecentTransactions.tsx, QuickActions.tsx
+- Mobile components (6): Dashboard.tsx, StatsRow.tsx, ChartCard.tsx, MobileBudgetProgressChart.tsx, MobileCategoryBreakdown.tsx, TransactionsList.tsx
+- tRPC procedures (3): getAnalytics, getRecentTransactions, getQuickActions in `packages/api/src/routers/dashboard.ts`
+
+**Dependencies Added:**
+
+- Mobile: victory-native ^36.0.11 (Victory Native charts), react-native-svg ^15.4.0
+
+**Implementation Details:**
+
+- Web: Recharts v2.13.3 for charts, Server Components for data fetching, Client Components for interactivity
+- Mobile: Victory Native for charts, NativeWind for styling, react-native-gesture-handler for gestures, expo-haptics for haptics
+- Performance optimizations: Debounce (300ms), virtualization (@tanstack/react-virtual), server-side aggregation, memoized components
+
+**Known Limitations:**
+
+- Date-fns dependency missing (portfolio pages need it, not dashboard)
+- API integration issues in pre-existing files (stock.ts, transaction.ts) — separate issue
+- Dashboard page route needs creation (apps/web/app/page.tsx not yet created)
+
+**Resolution Status:**
+
+- All dashboard components implemented with correct types
+- Mobile components converted to NativeWind convention
+- No duplicate stat cards
+- Gestures and haptics implemented
+- Charts fit screen on mobile
+- Filters and quick actions functional
+
 ## [Unreleased]
 
 ### Added
