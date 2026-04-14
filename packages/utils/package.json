@@ -11,7 +11,8 @@
   "scripts": {
     "type-check": "tsc --noEmit",
     "lint": "eslint src/ --max-warnings 0",
-    "test": "vitest"
+    "test": "vitest",
+    "cron:net-worth-snapshot": "tsx src/cron/create-monthly-net-worth-snapshot.ts"
   },
   "dependencies": {
     "@finance/types": "workspace:*",

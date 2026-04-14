@@ -119,9 +119,12 @@ model User {
   budgets      Budget[]
   stocks       Stock[]
   dividends    Dividend[]
+  watchlists   Watchlist[]
+  priceAlerts  PriceAlert[]
   investments  Investment[]
   savingsGoals SavingsGoal[]
   debts        Debt[]
+  netWorthSnapshots NetWorthSnapshot[]
 
   @@map("users")
 }
@@ -382,4 +385,21 @@ model Debt {
   @@index([userId])
   @@index([userId, type])
   @@map("debts")
+}
+
+model NetWorthSnapshot {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  monthStart  DateTime
+  assets      Float
+  liabilities Float
+  netWorth    Float
+  growthRate  Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, monthStart])
+  @@map("net_worth_snapshots")
 }

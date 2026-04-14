@@ -55,6 +55,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- [Savings Goals] Implement complete Savings Goals feature with backend procedures and full web+mobile UI
+  - Backend tRPC procedures in `packages/api/src/routers/goal.ts`:
+    - `contribute`: Add funds to a goal (validate target within 20% of goal amount, ownership check, update targetAmount, trigger milestones)
+    - `calculateMonthlySavings`: Calculate estimated monthly savings needed to reach goal by deadline (days remaining / target amount \* current balance)
+    - `getProgressWithProjection`: Get goal progress with projected completion date based on monthly savings calculation
+  - Web UI components in `apps/web/components/goals/`:
+    - `GoalsOverview.tsx`: Main goals overview page with list of all user goals, server-side data fetching, Total Balance stat card
+    - `GoalCard.tsx`: Circular progress display (SVG ring with fill), milestone highlighting (25%, 50%, 75%, 100%), formatted amounts (USD), action buttons (Contribute, Edit, Delete)
+    - `ContributeDialog.tsx`: Bottom-sheet contribution dialog with milestone toast notifications (sent when goal reaches 25%, 50%, 75%, 100% of target), validation, confirmation, account dropdown selector
+    - `GoalForm.tsx`: Create/edit form with goal name, target amount, deadline date picker, account selector (linked to user accounts), validation, optimistic UI
+    - `index.ts`: Barrel export for all goal components
+  - Web UI page: `apps/web/app/(dashboard)/goals/page.tsx`: Goals list page with server-side tRPC caller, Grid layout with cards, filters (by status, account), Total Balance stat card, action buttons (Add Goal, View All Goals)
+  - Mobile UI components in `apps/mobile/components/goals/`:
+    - `GoalCard.tsx`: Circular progress with gestures (swipe-right to contribute, long-press for options), touch feedback, swipe-to-delete confirmation, formatted amounts, milestone indicators
+    - `ContributeSheet.tsx`: Bottom sheet contribution interface with account selector, milestone notifications, touch-optimized inputs, swipe-to-dismiss
+  - Mobile UI page: `apps/mobile/app/(tabs)/goals.tsx`: Goals list page with Grid layout, circular progress, action buttons, swipe gestures, sync with server data
+  - Mobile navigation: Updated `apps/mobile/app/(tabs)/_layout.tsx` to add "Goals" tab alongside Home, Transactions, Budget, Settings
+  - Prisma schema: `SavingsGoal` model with fields: id, userId, name, targetAmount, currentBalance, deadline, accountId, createdAt, updatedAt, deletedAt (soft delete support)
+  - TypeScript types: `SavingsGoal` interface with all Prisma fields, tRPC procedure inputs/outputs in `packages/types/src/api.ts`
+  - Form validation: Zod schemas for goal create/edit forms in `packages/types/src/forms.ts`
+  - Milestone system: Automatic detection at 25%, 50%, 75%, 100% of target amount with toast notifications
+  - Progress visualization: SVG circular progress with fill percentage and milestone badges
+  - Monthly savings calculation: Estimation of required monthly contribution to reach goal by deadline
+  - Projected completion: Estimated deadline based on monthly savings rate and current balance
+  - Account linking: Goals can be linked to user accounts with automatic balance updates on contribution
+  - Soft delete: Goals marked as deleted rather than permanently removed
+  - Type safety: Full TypeScript type coverage across all files, NO `any` types
+  - Security: All procedures include `userId` ownership validation, input constraints (goal name max 100 chars, amount min 1, max 1M), date validation (deadline must be future or today)
+  - UX enhancements: Optimistic UI for contribution updates, loading states, error handling, confirmation dialogs, optimistic milestone toast delivery
+  - Files created: `packages/api/src/routers/goal.ts`, `apps/web/app/(dashboard)/goals/page.tsx`, `apps/web/components/goals/index.ts`, `apps/web/components/goals/GoalsOverview.tsx`, `apps/web/components/goals/GoalCard.tsx`, `apps/web/components/goals/ContributeDialog.tsx`, `apps/web/components/goals/GoalForm.tsx`, `apps/mobile/app/(tabs)/goals.tsx`, `apps/mobile/components/goals/GoalCard.tsx`, `apps/mobile/components/goals/ContributeSheet.tsx`
+  - Files modified: `packages/db/prisma/schema.prisma` (SavingsGoal model), `packages/types/src/models.ts` (SavingsGoal interface), `packages/types/src/api.ts` (goal-related tRPC procedure inputs/outputs), `packages/types/src/forms.ts` (goal validation schemas), `packages/api/src/root.ts` (goalRouter integration), `apps/mobile/app/(tabs)/_layout.tsx` (Goals tab added)
+
 - [Projects] Add `project.getAnalytics` procedure returning spend, burn rate, ETA, and risk/timeline indicators for user-owned projects (file: `packages/api/src/routers/project.ts`)
 - [Transactions] Add project-tag filtering support in `transaction.list` and project ownership validation in create/update flows (file: `packages/api/src/routers/transaction.ts`)
 

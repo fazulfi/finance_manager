@@ -1,6 +1,16 @@
 // packages/api/src/routers/dashboard.ts
 import { z } from "zod";
 import { router, protectedProcedure } from "../trpc.js";
+import type { DashboardAnalyticsAI } from "@finance/types";
+import {
+  buildBudgetRecommendations,
+  calculateAverages,
+  calculateFinancialHealthScore,
+  detectAnomalies,
+  detectTrends,
+  forecastSpending,
+} from "@finance/utils";
+import { getOpenRouterSuggestions } from "../lib/openrouter.js";
 
 export const dashboardRouter = router({
   /**
@@ -259,6 +269,112 @@ export const dashboardRouter = router({
           cashFlow: cashFlowChartData,
         },
       };
+    }),
+
+  getAIAnalytics: protectedProcedure
+    .input(
+      z.object({
+        dateFrom: z.date().nullish(),
+        dateTo: z.date().nullish(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const dateFrom = input.dateFrom ?? new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+      const dateTo = input.dateTo ?? new Date();
+
+      const [transactions, budgets, debts] = await Promise.all([
+        ctx.db.transaction.findMany({
+          where: {
+            userId,
+            date: { gte: dateFrom, lte: dateTo },
+          },
+          select: {
+            id: true,
+            date: true,
+            amount: true,
+            type: true,
+            category: true,
+          },
+          orderBy: { date: "asc" },
+        }),
+        ctx.db.budget.findMany({
+          where: {
+            userId,
+            startDate: { lte: dateTo },
+            OR: [{ endDate: null }, { endDate: { gte: dateFrom } }],
+          },
+          select: { items: true },
+        }),
+        ctx.db.debt.findMany({
+          where: { userId },
+          select: { remaining: true },
+        }),
+      ]);
+
+      const txInput = transactions.map((tx) => ({
+        id: tx.id,
+        date: tx.date,
+        amount: tx.amount,
+        type: tx.type,
+        category: tx.category,
+      }));
+
+      const spendingPatterns = calculateAverages(txInput);
+      const categoryTrends = detectTrends(txInput);
+      const anomalies = detectAnomalies(txInput);
+      const forecast = forecastSpending(txInput, { method: "moving-average", periods: 3 });
+      const budgetRecommendations = buildBudgetRecommendations(categoryTrends);
+
+      const totalIncome = txInput
+        .filter((tx) => tx.type === "INCOME")
+        .reduce((sum, tx) => sum + tx.amount, 0);
+      const totalExpense = txInput
+        .filter((tx) => tx.type === "EXPENSE")
+        .reduce((sum, tx) => sum + tx.amount, 0);
+      const totalBudgeted = budgets.reduce(
+        (sum, budget) =>
+          sum +
+          budget.items.reduce(
+            (itemsTotal: number, item: { budgeted: number }) => itemsTotal + item.budgeted,
+            0,
+          ),
+        0,
+      );
+      const totalDebtRemaining = debts.reduce((sum, debt) => sum + debt.remaining, 0);
+
+      const financialHealth = calculateFinancialHealthScore({
+        totalIncome,
+        totalExpense,
+        totalBudgeted,
+        totalDebtRemaining,
+      });
+
+      const providerSuggestions = await getOpenRouterSuggestions({
+        categoryTrends,
+        financialHealthScore: financialHealth.score,
+      });
+
+      const output: DashboardAnalyticsAI = {
+        provider: providerSuggestions.length > 0 ? "OPENROUTER_HYBRID" : "RULE_BASED",
+        spendingPatterns,
+        categoryTrends,
+        budgetRecommendations,
+        anomalies,
+        forecast,
+        financialHealth: {
+          ...financialHealth,
+          suggestions: [
+            ...financialHealth.suggestions,
+            ...providerSuggestions.filter(
+              (suggestion) => !financialHealth.suggestions.includes(suggestion),
+            ),
+          ].slice(0, 8),
+        },
+        providerSuggestions,
+      };
+
+      return output;
     }),
 
   /**

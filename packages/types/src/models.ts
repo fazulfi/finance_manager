@@ -36,6 +36,7 @@ export interface User {
   investments: Investment[];
   savingsGoals: SavingsGoal[];
   debts: Debt[];
+  netWorthSnapshots: NetWorthSnapshot[];
 }
 
 /**
@@ -273,4 +274,22 @@ export interface PriceAlert {
   // Relations
   user: User;
   stock: Stock;
+}
+
+/**
+ * NetWorthSnapshot model — Monthly net worth snapshot for trend analysis
+ */
+export interface NetWorthSnapshot {
+  id: string; // MongoDB ObjectId
+  userId: string; // Foreign key (ObjectId)
+  monthStart: Date;
+  assets: number;
+  liabilities: number;
+  netWorth: number;
+  growthRate: number;
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Relation
+  user: User;
 }

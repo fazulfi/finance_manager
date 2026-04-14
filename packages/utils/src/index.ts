@@ -9,3 +9,4 @@ export * from "./calculations";
 export * from "./cn";
 export * from "./stock-api";
 export * from "./charts";
+export * from "./analytics";

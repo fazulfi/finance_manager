@@ -6,7 +6,9 @@ import { dashboardRouter } from "./routers/dashboard.js";
 import { debtRouter } from "./routers/debt.js";
 import { goalRouter } from "./routers/goal.js";
 import { investmentRouter } from "./routers/investment.js";
+import { netWorthRouter } from "./routers/net-worth.js";
 import { projectRouter } from "./routers/project.js";
+import { reportRouter } from "./routers/report.js";
 import { stockRouter } from "./routers/stock.js";
 import { transactionRouter } from "./routers/transaction.js";
 import { createCallerFactory, router } from "./trpc.js";
@@ -20,9 +22,11 @@ export const appRouter = router({
   budget: budgetRouter,
   stock: stockRouter,
   investment: investmentRouter,
+  netWorth: netWorthRouter,
   goal: goalRouter,
   debt: debtRouter,
   dashboard: dashboardRouter,
+  report: reportRouter,
 });
 
 export type AppRouter = typeof appRouter;

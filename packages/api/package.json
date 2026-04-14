@@ -26,11 +26,14 @@
     "lint": "eslint src/ --max-warnings 0"
   },
   "dependencies": {
+    "@finance/types": "workspace:*",
+    "@finance/utils": "workspace:*",
+    "@react-pdf/renderer": "^4.4.1",
     "@trpc/client": "^10.45.2",
     "@trpc/next": "^10.45.2",
     "@trpc/react-query": "^10.45.2",
     "@trpc/server": "^10.45.2",
-    "@finance/types": "workspace:*",
+    "exceljs": "^4.4.0",
     "superjson": "^2.2.2",
     "zod": "^3.23.8"
   },

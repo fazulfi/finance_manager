@@ -1,18 +1,20 @@
-// apps/web/components/dashboard/Dashboard.tsx
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
+import { api } from "@finance/api/react";
 import { Skeleton } from "@finance/ui";
-import { auth } from "@/auth";
 import { StatCard } from "./StatCard";
 import { Filters } from "./Filters";
 import { IncomeExpenseChart } from "./IncomeExpenseChart";
 import { CategoryBreakdown } from "./CategoryBreakdown";
 import { BudgetProgressChart } from "./BudgetProgressChart";
 import { CashFlowChart } from "./CashFlowChart";
-import { RecentTransactions } from "./RecentTransactions";
 import { QuickActions } from "./QuickActions";
-import type { DashboardAnalyticsOutput } from "@finance/types";
+import { TransactionItem } from "@/components/transactions/TransactionItem";
+import { InsightsPanel } from "./InsightsPanel";
+import { TrendAnalysis } from "./TrendAnalysis";
+import { BudgetRecommendations } from "./BudgetRecommendations";
+import { AnomalyDetection } from "./AnomalyDetection";
 
 interface FilterState {
   dateFrom: Date | null;
@@ -21,7 +23,7 @@ interface FilterState {
   category: string | null;
 }
 
-export function Dashboard() {
+export function Dashboard(): React.JSX.Element {
   const [filters, setFilters] = useState<FilterState>({
     dateFrom: null,
     dateTo: null,
@@ -29,88 +31,37 @@ export function Dashboard() {
     category: null,
   });
 
-  async function getAnalytics(
-    filters?: Partial<FilterState>,
-  ): Promise<DashboardAnalyticsOutput | null> {
-    const session = await auth();
-    if (!session?.user) return null;
+  const analyticsInput = useMemo(
+    () => ({
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo,
+    }),
+    [filters.dateFrom, filters.dateTo],
+  );
 
-    const { createCallerFactory } = await import("@finance/api/trpc");
-    const callerFactory = createCallerFactory();
-    const trpc = await callerFactory();
-    try {
-      const analytics = await trpc.dashboard.getAnalytics(filters);
-      return analytics;
-    } catch (error) {
-      console.error("Failed to fetch analytics:", error);
-      return null;
-    }
-  }
+  const analyticsQuery = api.dashboard.getAnalytics.useQuery(analyticsInput);
+  const aiAnalyticsQuery = api.dashboard.getAIAnalytics.useQuery(analyticsInput);
+  const recentTransactionsQuery = api.dashboard.getRecentTransactions.useQuery({ limit: 10 });
+  const quickActionsQuery = api.dashboard.getQuickActions.useQuery();
 
-  async function getRecentTransactions() {
-    const session = await auth();
-    if (!session?.user) return [];
+  const loading =
+    analyticsQuery.isLoading ||
+    aiAnalyticsQuery.isLoading ||
+    recentTransactionsQuery.isLoading ||
+    quickActionsQuery.isLoading;
+  const error = analyticsQuery.error ?? aiAnalyticsQuery.error ?? recentTransactionsQuery.error;
 
-    const { createCallerFactory } = await import("@finance/api/trpc");
-    const callerFactory = createCallerFactory();
-    const trpc = await callerFactory();
-    try {
-      const result = await trpc.dashboard.getRecentTransactions({ limit: 10 });
-      return result.items || [];
-    } catch (error) {
-      console.error("Failed to fetch recent transactions:", error);
-      return [];
-    }
-  }
+  const analytics = analyticsQuery.data;
+  const aiAnalytics = aiAnalyticsQuery.data;
+  const recentTransactions = recentTransactionsQuery.data?.items ?? [];
 
-  async function getQuickActions() {
-    const session = await auth();
-    if (!session?.user) return [];
-
-    const { createCallerFactory } = await import("@finance/api/trpc");
-    const callerFactory = createCallerFactory();
-    const trpc = await callerFactory();
-    try {
-      const actions = await trpc.dashboard.getQuickActions();
-      return actions;
-    } catch (error) {
-      console.error("Failed to fetch quick actions:", error);
-      return [];
-    }
-  }
-
-  const [analytics, setAnalytics] = useState<DashboardAnalyticsOutput | null>(null);
-  const [recentTransactions, setRecentTransactions] = useState<
-    DashboardAnalyticsOutput["chartData"]["income"]
-  >([]);
-  const [quickActions, setQuickActions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true);
-        const [analyticsData, transactions, actions] = await Promise.all([
-          getAnalytics(filters),
-          getRecentTransactions(),
-          getQuickActions(),
-        ]);
-
-        setAnalytics(analyticsData);
-        setRecentTransactions(transactions);
-        setQuickActions(actions);
-        setError(null);
-      } catch (err) {
-        setError("Failed to load dashboard data");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchData();
-  }, [filters]);
+  const budgetChartData =
+    aiAnalytics?.budgetRecommendations.slice(0, 6).map((item) => ({
+      category: item.category,
+      budgeted: item.recommendedBudget,
+      spent: item.currentAverage,
+      remaining: item.recommendedBudget - item.currentAverage,
+    })) ?? [];
 
   if (loading) {
     return (
@@ -122,85 +73,71 @@ export function Dashboard() {
 
         <Skeleton className="h-[200px] w-full" />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-[120px] w-full" />
+          {[...Array(4)].map((_, index) => (
+            <Skeleton key={index} className="h-[120px] w-full" />
           ))}
         </div>
 
-        <Skeleton className="h-[400px] w-full" />
+        <Skeleton className="h-[420px] w-full" />
       </div>
     );
   }
 
-  if (error) {
+  if (error || !analytics || !aiAnalytics) {
     return (
       <div className="rounded-xl border border-rose-200 bg-rose-50 p-8 text-center">
         <h3 className="text-lg font-semibold text-rose-900">Error Loading Dashboard</h3>
-        <p className="mt-2 text-sm text-rose-700">{error}</p>
+        <p className="mt-2 text-sm text-rose-700">{error?.message ?? "Unable to load data."}</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
         <p className="mt-2 text-muted-foreground">
-          Overview of your financial status and recent activity
+          Overview of your financial status and AI-powered spending analysis
         </p>
       </div>
 
-      {/* Quick Actions */}
-      {quickActions.length > 0 && (
+      {quickActionsQuery.data && quickActionsQuery.data.length > 0 && (
         <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Quick Actions</h3>
+          <h3 className="mb-4 text-lg font-semibold text-foreground">Quick Actions</h3>
           <QuickActions />
         </div>
       )}
 
-      {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Balance"
-          value={analytics?.totalBalance?.toFixed(2) || "0.00"}
-          icon={<Activity className="h-6 w-6" />}
-        />
+        <StatCard title="Total Balance" value={analytics.totalBalance.toFixed(2)} icon={<Activity className="h-6 w-6" />} />
         <StatCard
           title="Net Cash Flow"
-          value={analytics?.netCashFlow?.toFixed(2) || "0.00"}
-          trend={
-            analytics?.netCashFlow !== undefined && analytics?.totalIncome !== undefined
-              ? {
-                  value: (analytics.netCashFlow / (Math.abs(analytics.totalIncome) || 1)) * 100,
-                  isPositive: analytics.netCashFlow >= 0,
-                }
-              : undefined
-          }
+          value={analytics.netCashFlow.toFixed(2)}
+          trend={{
+            value: (analytics.netCashFlow / (Math.abs(analytics.totalIncome) || 1)) * 100,
+            isPositive: analytics.netCashFlow >= 0,
+          }}
           icon={<Activity className="h-6 w-6" />}
         />
-        <StatCard
-          title="Income"
-          value={analytics?.totalIncome?.toFixed(2) || "0.00"}
-          icon={<Activity className="h-6 w-6" />}
-        />
-        <StatCard
-          title="Expense"
-          value={analytics?.totalExpense?.toFixed(2) || "0.00"}
-          icon={<Activity className="h-6 w-6" />}
-        />
+        <StatCard title="Income" value={analytics.totalIncome.toFixed(2)} icon={<Activity className="h-6 w-6" />} />
+        <StatCard title="Expense" value={analytics.totalExpense.toFixed(2)} icon={<Activity className="h-6 w-6" />} />
       </div>
 
-      {/* Filters */}
+      <InsightsPanel
+        patterns={aiAnalytics.spendingPatterns}
+        forecast={aiAnalytics.forecast}
+        financialHealth={aiAnalytics.financialHealth}
+        provider={aiAnalytics.provider}
+      />
+
       <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
         <Filters initialFilters={filters} onFiltersChange={setFilters} />
       </div>
 
-      {/* Charts Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Income vs Expense</h3>
-          {analytics?.chartData && analytics.chartData.income.length > 0 ? (
+          <h3 className="mb-4 text-lg font-semibold text-foreground">Income vs Expense</h3>
+          {analytics.chartData.income.length > 0 ? (
             <IncomeExpenseChart
               data={analytics.chartData.income.map((item, index) => ({
                 date: item.date,
@@ -216,9 +153,9 @@ export function Dashboard() {
         </div>
 
         <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Category Breakdown</h3>
-          {analytics?.chartData && analytics.chartData.category.length > 0 ? (
-            <CategoryBreakdown data={analytics.chartData.category} />
+          <h3 className="mb-4 text-lg font-semibold text-foreground">Category Breakdown</h3>
+          {analytics.chartData.category.length > 0 ? (
+            <CategoryBreakdown data={analytics.chartData.category as any} />
           ) : (
             <div className="flex h-[400px] items-center justify-center text-muted-foreground">
               No data available
@@ -227,16 +164,21 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Budget and Cash Flow */}
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Budget Progress</h3>
-          <BudgetProgressChart data={[]} />
+          <h3 className="mb-4 text-lg font-semibold text-foreground">Budget Progress</h3>
+          {budgetChartData.length > 0 ? (
+            <BudgetProgressChart data={budgetChartData} />
+          ) : (
+            <div className="flex h-[400px] items-center justify-center text-muted-foreground">
+              No recommendation data available
+            </div>
+          )}
         </div>
 
         <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Cash Flow</h3>
-          {analytics?.chartData && analytics.chartData.cashFlow.length > 0 ? (
+          <h3 className="mb-4 text-lg font-semibold text-foreground">Cash Flow</h3>
+          {analytics.chartData.cashFlow.length > 0 ? (
             <CashFlowChart data={analytics.chartData.cashFlow} />
           ) : (
             <div className="flex h-[400px] items-center justify-center text-muted-foreground">
@@ -246,10 +188,28 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Recent Transactions */}
-      <Suspense fallback={<Skeleton className="h-[200px] w-full" />}>
-        <RecentTransactions limit={10} />
-      </Suspense>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <TrendAnalysis trends={aiAnalytics.categoryTrends} />
+        <BudgetRecommendations
+          recommendations={aiAnalytics.budgetRecommendations}
+          providerSuggestions={aiAnalytics.providerSuggestions}
+        />
+      </div>
+
+      <AnomalyDetection anomalies={aiAnalytics.anomalies} />
+
+      <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+        <h3 className="mb-4 text-lg font-semibold text-foreground">Recent Transactions</h3>
+        {recentTransactions.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No recent transactions.</p>
+        ) : (
+          <div className="space-y-0">
+            {recentTransactions.map((transaction) => (
+              <TransactionItem key={transaction.id} transaction={transaction as any} variant="row" />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -441,3 +441,42 @@ export interface UpdateUserInput {
 export interface UserParams {
   id: string;
 }
+
+/**
+ * Net worth router types
+ */
+export interface NetWorthHistoryInput {
+  months?: number;
+  includeCurrent?: boolean;
+}
+
+export interface NetWorthBreakdownItem {
+  name: string;
+  value: number;
+  percentage: number;
+}
+
+export interface CalculateNetWorthOutput {
+  asOf: Date;
+  monthStart: Date;
+  assetsTotal: number;
+  liabilitiesTotal: number;
+  netWorth: number;
+  growthRate: number;
+  growthAmount: number;
+  previousNetWorth: number | null;
+  previousMonthStart: Date | null;
+  assetsBreakdown: NetWorthBreakdownItem[];
+  liabilitiesBreakdown: NetWorthBreakdownItem[];
+}
+
+export interface NetWorthHistoryItem {
+  id: string;
+  monthStart: Date;
+  label: string;
+  assets: number;
+  liabilities: number;
+  netWorth: number;
+  growthRate: number;
+  isSnapshot: boolean;
+}

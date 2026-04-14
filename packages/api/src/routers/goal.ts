@@ -200,4 +200,163 @@ export const goalRouter = router({
         daysRemaining,
       };
     }),
+
+  getProgressWithProjection: protectedProcedure
+    .input(z.object({ id: objectId }))
+    .query(async ({ ctx, input }) => {
+      const goal = await ctx.db.savingsGoal.findFirst({
+        where: { id: input.id, userId: ctx.session.user.id },
+        select: { id: true, currentAmount: true, targetAmount: true, deadline: true },
+      });
+
+      if (!goal) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Savings goal not found" });
+      }
+
+      const percentComplete =
+        goal.targetAmount > 0
+          ? Math.min(Math.round((goal.currentAmount / goal.targetAmount) * 100), 100)
+          : 0;
+
+      const remainingAmount = Math.max(goal.targetAmount - goal.currentAmount, 0);
+
+      const now = new Date();
+      let daysRemaining: number | null = null;
+      if (goal.deadline !== null) {
+        daysRemaining = Math.ceil(
+          (goal.deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+        );
+      }
+
+      // Burn rate projection pattern from project.ts:10-87
+      const MS_PER_DAY = 1000 * 60 * 60 * 24;
+      const burnRatePerDay =
+        daysRemaining !== null && daysRemaining > 0 ? remainingAmount / daysRemaining : 0;
+
+      const estimatedCompletionDate =
+        burnRatePerDay > 0 && remainingAmount > 0
+          ? new Date(now.getTime() + (remainingAmount / burnRatePerDay) * MS_PER_DAY)
+          : goal.currentAmount >= goal.targetAmount
+            ? now
+            : null;
+
+      return {
+        ...goal,
+        progressPercent: percentComplete,
+        remainingAmount,
+        daysRemaining,
+        estimatedCompletionDate,
+      };
+    }),
+
+  contribute: protectedProcedure
+    .input(
+      z.object({
+        id: objectId,
+        amount: z.number().positive(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const goal = await ctx.db.savingsGoal.findFirst({
+        where: { id: input.id, userId: ctx.session.user.id },
+      });
+      if (!goal) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Savings goal not found" });
+      }
+
+      // Find account to verify it exists and belongs to user
+      if (goal.accountId) {
+        const account = await ctx.db.account.findFirst({
+          where: { id: goal.accountId, userId: ctx.session.user.id },
+        });
+        if (!account) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Associated account not found or access denied",
+          });
+        }
+      }
+
+      const previousAmount = goal.currentAmount;
+      const targetAmount = goal.targetAmount;
+      const previousPercentComplete =
+        targetAmount > 0 ? Math.min(Math.round((previousAmount / targetAmount) * 100), 100) : 0;
+
+      const newAmount = previousAmount + input.amount;
+      const remainingAmount = Math.max(targetAmount - newAmount, 0);
+      const newPercentComplete =
+        targetAmount > 0 ? Math.min(Math.round((newAmount / targetAmount) * 100), 100) : 0;
+
+      // Check milestones without changing database status
+      const milestoneReached =
+        previousPercentComplete < 100 && newPercentComplete >= 100
+          ? "100_PERCENT"
+          : previousPercentComplete < 75 && newPercentComplete >= 75
+            ? "75_PERCENT"
+            : previousPercentComplete < 50 && newPercentComplete >= 50
+              ? "50_PERCENT"
+              : previousPercentComplete < 25 && newPercentComplete >= 25
+                ? "25_PERCENT"
+                : null;
+
+      // Determine new status in database (only COMPLETED can be updated)
+      let newStatus = goal.status;
+      if (newAmount >= targetAmount) {
+        newStatus = "COMPLETED";
+      }
+
+      const updatedGoal = await ctx.db.savingsGoal.update({
+        where: { id: input.id, userId: ctx.session.user.id },
+        data: {
+          currentAmount: newAmount,
+          status: newStatus,
+        },
+      });
+
+      return {
+        ...updatedGoal,
+        contributionAmount: input.amount,
+        previousAmount,
+        remainingAmount,
+        targetAmount,
+        previousPercentComplete,
+        newPercentComplete,
+        milestoneReached,
+      };
+    }),
+
+  calculateMonthlySavings: protectedProcedure
+    .input(
+      z.object({
+        targetAmount: z.number().positive(),
+        deadline: z.date(),
+        startDate: z.date().optional(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+      const now = new Date();
+      const daysRemaining = Math.ceil((input.deadline.getTime() - now.getTime()) / MS_PER_DAY);
+
+      let monthlySavings: number;
+      let estimatedCompletionDate: Date | null = null;
+
+      if (daysRemaining <= 0) {
+        monthlySavings = 0;
+        estimatedCompletionDate = now;
+      } else {
+        const monthsRemaining = Math.max(1, daysRemaining / 30);
+        monthlySavings = Math.ceil(input.targetAmount / monthsRemaining);
+        estimatedCompletionDate = new Date(
+          now.getTime() + (input.targetAmount / monthlySavings) * daysRemaining,
+        );
+      }
+
+      return {
+        monthlySavings,
+        daysRemaining,
+        estimatedCompletionDate,
+      };
+    }),
 });

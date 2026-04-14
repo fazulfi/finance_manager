@@ -50,6 +50,10 @@ export function Filters({ initialFilters = {}, onFiltersChange }: FiltersProps) 
 
   const debouncedFilters = useDebounce(filters, 300);
 
+  useEffect(() => {
+    onFiltersChange(debouncedFilters);
+  }, [debouncedFilters, onFiltersChange]);
+
   // Update URL when debounced filters change
   useEffect(() => {
     const params = new URLSearchParams();

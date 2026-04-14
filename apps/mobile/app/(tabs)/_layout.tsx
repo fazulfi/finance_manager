@@ -68,6 +68,15 @@ export default function TabsLayout(): React.JSX.Element {
         }}
       />
       <Tabs.Screen
+        name="goals"
+        options={{
+          title: "Goals",
+          tabBarIcon: ({ color, size }) => (
+            <TabIcon name="flag-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: "Settings",

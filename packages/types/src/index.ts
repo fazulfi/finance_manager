@@ -7,3 +7,4 @@ export * from "./api";
 export * from "./forms";
 export * from "./stock";
 export * from "./dashboard";
+export * from "./analytics";
