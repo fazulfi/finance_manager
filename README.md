@@ -50,6 +50,10 @@ Personal finance monorepo with shared web, mobile, API, and database packages.
    pnpm dev
    ```
 
+### Local agent workspaces
+
+- `.opencode/` and `.kilo/` are personal/local agent workspaces and are intentionally not tracked in git.
+
 ### `packages/api` notes
 
 - Root entrypoint `@finance/api` exports the server-safe router and tRPC helpers only.

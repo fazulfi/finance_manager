@@ -93,6 +93,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- [Workflow] Document local-only agent workspace policy: `.opencode/` and `.kilo/` should stay untracked (file: README.md)
 - [AAS] Update CLI integration entrypoints to use the new core communication pipeline (`bin/run-agent`, `bin/start-aas`) (file: bin/run-agent.ts)
 - [Verification] Confirm `@finance/aas` build, type-check, lint, and test pass; document full monorepo `pnpm build` failure as Windows EPERM symlink in `@finance/web` (informational, out-of-scope) (file: .opencode/CURRENT_CONTEXT.md)
 
