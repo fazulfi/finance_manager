@@ -1,0 +1,63 @@
+#!/usr/bin/env node
+
+/**
+ * Agent Execution Entry Point
+ *
+ * This script executes a single agent task with specific parameters.
+ */
+
+import { Command } from 'commander';
+import pino from 'pino';
+import pinoPretty from 'pino-pretty';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Create logger
+const logger = pino(
+  pinoPretty({
+    translateTime: 'SYS:standard',
+    ignore: 'pid,hostname',
+    colorize: true,
+  })
+);
+
+const program = new Command();
+
+program
+  .name('run-agent')
+  .description('Execute an agent task')
+  .version('0.0.1')
+  .requiredOption('-a, --agent-id <string>', 'Agent ID to execute')
+  .requiredOption('-t, --task-id <string>', 'Task ID to execute')
+  .option('--task-brief <string>', 'Brief description of the task')
+  .option('--config-file <path>', 'Path to AAS config file', '.env.aas')
+  .option('--env-file <path>', 'Path to environment file', '.env.aas')
+  .action(async (options) => {
+    logger.info({ options }, 'Running agent task');
+
+    try {
+      // Load environment variables from .env.aas
+      const dotenv = await import('dotenv');
+      const envPath = path.join(__dirname, options.envFile);
+      dotenv.config({ path: envPath });
+
+      logger.info({ agentId: options.agentId, taskId: options.taskId }, 'Executing agent task');
+
+      // TODO: Load agent configuration
+      // TODO: Load task from queue or definition
+      // TODO: Execute agent process
+      // TODO: Wait for completion
+      // TODO: Log results
+
+      logger.info('Agent task completed');
+      process.exit(0);
+    } catch (error) {
+      logger.error({ error }, 'Agent task failed');
+      process.exit(1);
+    }
+  });
+
+program.parse();

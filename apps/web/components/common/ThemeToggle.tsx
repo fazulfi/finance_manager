@@ -1,9 +1,9 @@
 "use client";
 
+import { Button } from "@finance/ui";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
-import { Button } from "@finance/ui";
 
 export function ThemeToggle(): React.JSX.Element {
   const { resolvedTheme, setTheme } = useTheme();

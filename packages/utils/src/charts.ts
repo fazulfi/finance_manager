@@ -1,5 +1,5 @@
-import type { ChartDataPoint } from "@finance/types";
 import { TransactionType } from "@finance/types";
+import type { ChartDataPoint } from "@finance/types";
 import type { Budget, Transaction } from "@finance/types";
 
 /**
@@ -7,7 +7,7 @@ import type { Budget, Transaction } from "@finance/types";
  */
 export function formatDateRanges(range: string): { dateFrom: Date; dateTo: Date } {
   const dateTo = new Date();
-  let dateFrom = new Date(dateTo);
+  const dateFrom = new Date(dateTo);
 
   switch (range) {
     case "LAST_7_DAYS":

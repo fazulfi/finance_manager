@@ -1,9 +1,9 @@
 // apps/web/components/transactions/TransactionFilters.tsx
 "use client";
 
-import { useEffect, useState } from "react";
-import { Filter, X } from "lucide-react";
 import { Button } from "@finance/ui";
+import { Filter, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface TransactionFiltersProps {
   filters: {

@@ -1,7 +1,16 @@
 "use client";
 
 import { api } from "@finance/api/react";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, toast } from "@finance/ui";
+import type { DebtType } from "@finance/types";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  toast,
+} from "@finance/ui";
 import { Calendar, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -27,14 +36,15 @@ function formatPercent(value: number): string {
   return `${value.toFixed(1)}%`;
 }
 
-function formatType(type: string): string {
-  return type.toLowerCase().replaceAll("_", " ");
+function formatType(type: string | DebtType): string {
+  return String(type).toLowerCase().replace(/_/g, " ");
 }
 
 export function DebtCard({ debt }: { debt: DebtCardDebt }): React.JSX.Element {
   const router = useRouter();
   const utils = api.useContext();
-  const paidPercent = debt.totalAmount > 0 ? ((debt.totalAmount - debt.remaining) / debt.totalAmount) * 100 : 0;
+  const paidPercent =
+    debt.totalAmount > 0 ? ((debt.totalAmount - debt.remaining) / debt.totalAmount) * 100 : 0;
 
   const deleteDebt = api.debt.delete.useMutation({
     onSuccess: async () => {
@@ -77,7 +87,9 @@ export function DebtCard({ debt }: { debt: DebtCardDebt }): React.JSX.Element {
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Remaining</span>
-            <span className="font-mono tabular-nums text-gray-900">{formatMoney(debt.remaining)}</span>
+            <span className="font-mono tabular-nums text-gray-900">
+              {formatMoney(debt.remaining)}
+            </span>
           </div>
           <div className="h-2 rounded-full bg-muted">
             <div
@@ -110,12 +122,12 @@ export function DebtCard({ debt }: { debt: DebtCardDebt }): React.JSX.Element {
           </div>
         </div>
 
-        <PaymentSchedule debt={debt} />
+        <PaymentSchedule debt={debt as any} />
 
         <div className="flex items-center gap-2">
           <DebtForm
             mode="update"
-            debt={debt}
+            debt={debt as any}
             trigger={
               <Button type="button" variant="outline" size="sm" className="flex-1 gap-2">
                 <Pencil className="h-4 w-4" />

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { api } from "@finance/api/react";
+import type { PortfolioHolding } from "@finance/types";
 import {
   Button,
   Card,
@@ -21,10 +21,11 @@ import {
   BarChart3,
   Wallet,
 } from "lucide-react";
+import { useState } from "react";
+
+import { PortfolioChart } from "@/components/portfolio/PortfolioChart";
 import { StockCard } from "@/components/portfolio/StockCard";
 import { StockForm } from "@/components/portfolio/StockForm";
-import { PortfolioChart } from "@/components/portfolio/PortfolioChart";
-import type { PortfolioHolding } from "@finance/types";
 
 export default function PortfolioPage() {
   const [showForm, setShowForm] = useState(false);
@@ -44,7 +45,8 @@ export default function PortfolioPage() {
         description: `Updated ${res.updated} holdings${res.failed > 0 ? `, ${res.failed} failed` : ""}.`,
       });
     },
-    onError: (e) => toast({ title: "Refresh failed", description: e.message, variant: "destructive" }),
+    onError: (e) =>
+      toast({ title: "Refresh failed", description: e.message, variant: "destructive" }),
   });
 
   const formatIDR = (val: number) =>
@@ -78,7 +80,13 @@ export default function PortfolioPage() {
             />
             Refresh Prices
           </Button>
-          <Button size="sm" onClick={() => { setEditHolding(undefined); setShowForm(true); }}>
+          <Button
+            size="sm"
+            onClick={() => {
+              setEditHolding(undefined);
+              setShowForm(true);
+            }}
+          >
             <Plus className="mr-2 h-4 w-4" />
             Add Holding
           </Button>
@@ -206,7 +214,10 @@ export default function PortfolioPage() {
                 </p>
                 <Button
                   className="mt-4"
-                  onClick={() => { setEditHolding(undefined); setShowForm(true); }}
+                  onClick={() => {
+                    setEditHolding(undefined);
+                    setShowForm(true);
+                  }}
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   Add Holding
@@ -220,7 +231,10 @@ export default function PortfolioPage() {
                 <StockCard
                   key={holding.id}
                   holding={holding}
-                  onEdit={(h) => { setEditHolding(h); setShowForm(true); }}
+                  onEdit={(h) => {
+                    setEditHolding(h);
+                    setShowForm(true);
+                  }}
                 />
               ))
           )}
@@ -231,7 +245,7 @@ export default function PortfolioPage() {
       <StockForm
         open={showForm}
         onOpenChange={setShowForm}
-        holding={editHolding}
+        holding={editHolding ?? undefined}
         onSuccess={() => utils.stock.getPortfolioValue.invalidate()}
       />
     </div>

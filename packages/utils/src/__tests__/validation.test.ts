@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect } from "vitest";
+
 import { email, phone, currency, positive, nonNegative, budgetAmount } from "../validation";
 
 describe("validation", () => {

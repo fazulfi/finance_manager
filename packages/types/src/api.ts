@@ -311,6 +311,40 @@ export interface BudgetItemWithProgress extends BudgetItem {
 /**
  * Stock router types
  */
+export type PriceHistoryPeriod = "1mo" | "3mo" | "6mo" | "1y" | "2y" | "5y";
+
+export interface StockHolding {
+  id: string;
+  ticker: string;
+  name: string;
+  exchange: string;
+  sector: string;
+  quantity: number;
+  avgBuyPrice: number;
+  currentPrice: number;
+  totalCost: number;
+  currentValue: number;
+  gain: number;
+  gainPercent: number;
+  lastUpdated: Date;
+}
+
+export interface PortfolioHolding {
+  id: string;
+  ticker: string;
+  name: string;
+  exchange: string;
+  sector: string;
+  quantity: number;
+  avgBuyPrice: number;
+  currentPrice: number;
+  totalCost: number;
+  currentValue: number;
+  gain: number;
+  gainPercent: number;
+  lastUpdated: Date;
+}
+
 export interface CreateStockInput {
   ticker: string;
   name: string;

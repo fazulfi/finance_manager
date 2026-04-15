@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+
 import { ProjectsOverview } from "@/components/projects/ProjectCard";
 
 export const metadata: Metadata = {

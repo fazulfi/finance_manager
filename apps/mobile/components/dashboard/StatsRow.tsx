@@ -1,4 +1,6 @@
 // apps/mobile/components/dashboard/StatsRow.tsx
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import React, { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Dimensions, StyleSheet } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -8,8 +10,6 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import * as Haptics from "expo-haptics";
-import { Ionicons } from "@expo/vector-icons";
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 

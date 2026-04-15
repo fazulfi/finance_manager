@@ -1,3 +1,5 @@
+"use client";
+
 // apps/web/app/(dashboard)/transactions/new/page.tsx
 import Link from "next/link";
 import { QuickAddSheet } from "@/components/transactions/QuickAddSheet";

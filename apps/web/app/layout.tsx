@@ -1,7 +1,8 @@
+import { Toaster } from "@finance/ui";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import type { ReactNode } from "react";
-import { Toaster } from "@finance/ui";
+
 import { Providers } from "./providers";
 
 import "./globals.css";

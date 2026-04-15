@@ -1,8 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { ThemeToggle } from "@/components/common/ThemeToggle";
 import { PageTransition } from "@/components/common/PageTransition";
+import { ThemeToggle } from "@/components/common/ThemeToggle";
 
 interface DashboardLayoutProps {
   children: ReactNode;

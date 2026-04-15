@@ -1,5 +1,9 @@
 "use client";
 
+import { api } from "@finance/api/react";
+import type { PriceHistoryPeriod } from "@finance/types";
+import { Skeleton } from "@finance/ui";
+import { format } from "date-fns";
 import { useState } from "react";
 import {
   AreaChart,
@@ -10,10 +14,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { api } from "@finance/api/react";
-import { Skeleton } from "@finance/ui";
-import type { PriceHistoryPeriod } from "@finance/types";
-import { format } from "date-fns";
 
 const PERIODS: { label: string; value: PriceHistoryPeriod }[] = [
   { label: "1M", value: "1mo" },

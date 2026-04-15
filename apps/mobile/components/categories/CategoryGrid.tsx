@@ -1,9 +1,9 @@
 // apps/mobile/components/categories/CategoryGrid.tsx
-import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
 import type { Category } from "@finance/types";
-import { cn } from "@finance/utils";
 import { CategoryType } from "@finance/types/src/enums";
+import { cn } from "@finance/utils";
+import * as Haptics from "expo-haptics";
 import React, { useState, useMemo } from "react";
 import { View, Text, Pressable, StyleSheet, FlatList } from "react-native";
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";

@@ -1,8 +1,9 @@
 "use client";
 
-import { Search } from "lucide-react";
 import { cn } from "@finance/utils";
+import { Search } from "lucide-react";
 import { type InputHTMLAttributes, useState } from "react";
+
 import type { IconPickerProps } from "./types";
 
 const ICONS: { emoji: string; name: string }[] = [

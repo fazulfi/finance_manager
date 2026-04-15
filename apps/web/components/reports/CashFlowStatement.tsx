@@ -1,8 +1,9 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@finance/ui";
-import { Line, LineChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { formatCurrency } from "@finance/utils";
+import { Line, LineChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+
 import type { GeneratedReport } from "./types";
 
 function money(amount: number): string {

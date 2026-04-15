@@ -1,5 +1,5 @@
-import * as React from "react";
 import { List as RadixList } from "@radix-ui/react-tabs";
+import * as React from "react";
 
 export type TabsListProps = React.ComponentProps<typeof RadixList>;
 

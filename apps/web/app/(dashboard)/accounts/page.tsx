@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
-import Link from "next/link";
 import { buttonVariants } from "@finance/ui";
 import { Plus } from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+
 import { AccountList } from "@/components/accounts/AccountList";
 
 export const metadata: Metadata = {

@@ -1,9 +1,10 @@
 // Demo: How to use IconPicker and ColorPicker in a CategoryForm
 "use client";
 
-import { useState } from "react";
-import { IconPicker, ColorPicker } from "../categories";
 import { Button } from "@finance/ui";
+import { useState } from "react";
+
+import { IconPicker, ColorPicker } from "../categories";
 
 interface CategoryFormData {
   name: string;

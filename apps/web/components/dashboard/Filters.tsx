@@ -1,10 +1,10 @@
 // apps/web/components/dashboard/Filters.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { Calendar, Filter, X } from "lucide-react";
 import { Button } from "@finance/ui";
+import { Calendar, Filter, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
 
 interface FilterState {
   dateFrom: Date | null;

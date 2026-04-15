@@ -1,4 +1,5 @@
 import Link from "next/link";
+
 import { ThemeToggle } from "@/components/common/ThemeToggle";
 
 export default function HomePage(): React.JSX.Element {

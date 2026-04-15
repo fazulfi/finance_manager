@@ -1,10 +1,10 @@
 "use client";
 
-import { Search, X } from "lucide-react";
 import { api } from "@finance/api/react";
+import { type Category, CategoryType } from "@finance/types";
 import { Input } from "@finance/ui";
 import { cn } from "@finance/utils";
-import { type Category, CategoryType } from "@finance/types";
+import { Search, X } from "lucide-react";
 import { useState } from "react";
 
 // Internal simplified category type for filtering (without user relation)

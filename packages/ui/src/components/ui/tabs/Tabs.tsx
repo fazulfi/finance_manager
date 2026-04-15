@@ -1,5 +1,5 @@
-import * as React from "react";
 import { Root as RadixRoot } from "@radix-ui/react-tabs";
+import * as React from "react";
 
 export type TabsProps = React.ComponentProps<typeof RadixRoot>;
 

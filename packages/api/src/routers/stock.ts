@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { getIdxQuote, getIdxStockByTicker, searchIdxStocks } from "../lib/idxMarket.js";
 import { router, protectedProcedure, objectId, type Context } from "../trpc.js";
+import type { PriceHistoryPeriod, PortfolioHolding } from "@finance/types";
 
 const ExchangeEnum = z.enum(["NYSE", "NASDAQ", "LSE", "OTHER"]);
 const PAGE_SIZE_DEFAULT = 20;
@@ -91,6 +92,278 @@ async function ensureUserWatchableStock(ctx: Context, userId: string, ticker: st
 }
 
 export const stockRouter = router({
+  // Portfolio Value - Get all user holdings
+  getPortfolioValue: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+
+    const stocks = await ctx.db.stock.findMany({
+      where: { userId },
+      orderBy: { ticker: "asc" },
+    });
+
+    // Calculate total value and gain
+    const totalCost = stocks.reduce((sum, stock) => sum + stock.totalCost, 0);
+    const currentValue = stocks.reduce((sum, stock) => sum + stock.currentValue, 0);
+    const totalGain = currentValue - totalCost;
+    const totalGainPercent = totalCost > 0 ? (totalGain / totalCost) * 100 : 0;
+
+    // Get total dividends and holding count
+    const [totalDividends, dividendCount] = await Promise.all([
+      ctx.db.dividend.aggregate({
+        where: {
+          stock: { userId },
+        },
+        _sum: { amount: true },
+      }),
+      ctx.db.stock.count({ where: { userId } }),
+    ]);
+
+    // Transform to portfolio holdings with enriched data
+    const holdings = await Promise.all(
+      stocks.map(async (stock) => {
+        const idxQuote = getIdxQuote(stock.ticker);
+        const gainPercent = idxQuote?.changePercent ?? stock.gainPercent;
+        const allocationPercent = totalCost > 0 ? (stock.totalCost / totalCost) * 100 : 0;
+
+        return {
+          id: stock.id,
+          ticker: stock.ticker,
+          name: idxQuote?.name ?? stock.name,
+          exchange: idxQuote ? "IDX" : stock.exchange,
+          sector: idxQuote?.sector ?? "Unknown",
+          quantity: stock.quantity,
+          avgBuyPrice: stock.avgBuyPrice,
+          currentPrice: idxQuote?.lastPrice ?? stock.currentPrice,
+          totalCost: stock.totalCost,
+          currentValue: stock.currentValue,
+          gain: stock.gain,
+          gainPercent,
+          allocationPercent,
+          lastUpdated: idxQuote?.lastUpdated ?? stock.lastUpdated,
+        } as PortfolioHolding;
+      }),
+    );
+
+    return {
+      totalValue: currentValue,
+      totalCost,
+      totalGain,
+      totalGainPercent,
+      totalDividends: totalDividends._sum.amount || 0,
+      holdingCount: dividendCount || stocks.length,
+      holdings,
+    };
+  }),
+
+  // Refresh Prices - Update all user stock prices from IDX market
+  refreshPrices: protectedProcedure.mutation(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
+
+    const stocks = await ctx.db.stock.findMany({
+      where: { userId },
+    });
+
+    let updated = 0;
+    let failed = 0;
+
+    for (const stock of stocks) {
+      try {
+        const idxQuote = getIdxQuote(stock.ticker);
+        if (!idxQuote) {
+          failed++;
+          continue;
+        }
+
+        await ctx.db.stock.update({
+          where: { id: stock.id, userId },
+          data: {
+            currentPrice: idxQuote.lastPrice,
+            gainPercent: idxQuote.changePercent,
+            lastUpdated: idxQuote.lastUpdated,
+          },
+        });
+        updated++;
+      } catch (error) {
+        console.error(`Failed to refresh price for ${stock.ticker}:`, error);
+        failed++;
+      }
+    }
+
+    return { updated, failed };
+  }),
+
+  // Dividend Queries
+  getDividends: protectedProcedure
+    .input(
+      z.object({
+        stockId: objectId,
+        page: z.number().int().min(1).default(1),
+        limit: z.number().int().min(1).max(100).default(20),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const { stockId, page, limit } = input;
+      const skip = (page - 1) * limit;
+
+      // Verify stock belongs to user
+      const stock = await ctx.db.stock.findFirst({
+        where: { id: stockId, userId },
+      });
+      if (!stock) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Stock not found" });
+      }
+
+      // Get dividends for this stock
+      const [dividends, total] = await Promise.all([
+        ctx.db.dividend.findMany({
+          where: {
+            stockId,
+          },
+          skip,
+          take: limit,
+          orderBy: { date: "desc" },
+          select: {
+            id: true,
+            amount: true,
+            date: true,
+            notes: true,
+          },
+        }),
+        ctx.db.dividend.count({ where: { stockId } }),
+      ]);
+
+      return {
+        items: dividends,
+        total,
+        page,
+        limit,
+      };
+    }),
+
+  addDividend: protectedProcedure
+    .input(
+      z.object({
+        stockId: objectId,
+        amount: z.number().positive(),
+        date: z.date(),
+        notes: z.string().max(500).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      // Verify stock belongs to user
+      const stock = await ctx.db.stock.findFirst({
+        where: { id: input.stockId, userId },
+      });
+      if (!stock) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Stock not found" });
+      }
+
+      // Create dividend record
+      const dividend = await ctx.db.dividend.create({
+        data: {
+          userId: ctx.session.user.id,
+          stockId: input.stockId,
+          amount: input.amount,
+          date: input.date,
+          notes: input.notes ?? null,
+        },
+      });
+
+      return dividend;
+    }),
+
+  deleteDividend: protectedProcedure
+    .input(
+      z.object({
+        dividendId: objectId,
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const existing = await ctx.db.dividend.findFirst({
+        where: {
+          id: input.dividendId,
+          stock: { userId },
+        },
+      });
+
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Dividend not found" });
+      }
+
+      await ctx.db.dividend.delete({
+        where: { id: input.dividendId },
+      });
+
+      return { success: true };
+    }),
+
+  // Stock History - Get historical price data (mock data simulation)
+  getStockHistory: protectedProcedure
+    .input(
+      z.object({
+        ticker: z.string().min(1),
+        period: z.enum(["1mo", "3mo", "6mo", "1y", "2y", "5y"]),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      // Verify stock belongs to user
+      const stock = await ctx.db.stock.findFirst({
+        where: { ticker: input.ticker.toUpperCase(), userId },
+      });
+      if (!stock) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Stock not found" });
+      }
+
+      // Generate mock historical data based on current price and period
+      const daysMap: Record<PriceHistoryPeriod, number> = {
+        "1mo": 30,
+        "3mo": 90,
+        "6mo": 180,
+        "1y": 365,
+        "2y": 730,
+        "5y": 1825,
+      };
+
+      const days = daysMap[input.period];
+      let basePrice = stock.currentPrice;
+      const history: Array<{ date: Date; close: number; open: number; high: number; low: number }> =
+        [];
+
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+
+      for (let i = 0; i < days; i++) {
+        const currentDate = new Date(startDate);
+        currentDate.setDate(startDate.getDate() + i);
+
+        // Random walk simulation
+        const changePercent = (Math.random() - 0.5) * 0.02; // +/- 1% daily
+        const openPrice = basePrice * (1 + changePercent);
+        const closePrice = basePrice * (1 + changePercent + (Math.random() - 0.5) * 0.01);
+        const highPrice = Math.max(openPrice, closePrice) * (1 + Math.random() * 0.01);
+        const lowPrice = Math.min(openPrice, closePrice) * (1 - Math.random() * 0.01);
+
+        history.push({
+          date: currentDate,
+          open: Math.round(openPrice * 100) / 100,
+          close: Math.round(closePrice * 100) / 100,
+          high: Math.round(highPrice * 100) / 100,
+          low: Math.round(lowPrice * 100) / 100,
+        });
+
+        basePrice = closePrice;
+      }
+
+      return history;
+    }),
+
   list: protectedProcedure
     .input(
       z.object({
@@ -129,7 +402,11 @@ export const stockRouter = router({
   create: protectedProcedure
     .input(
       z.object({
-        ticker: z.string().min(1).max(20).transform((value) => value.toUpperCase()),
+        ticker: z
+          .string()
+          .min(1)
+          .max(20)
+          .transform((value) => value.toUpperCase()),
         name: z.string().min(1).max(200),
         exchange: ExchangeEnum.default("OTHER"),
         quantity: z.number().positive(),
@@ -309,7 +586,11 @@ export const stockRouter = router({
   getInfo: protectedProcedure
     .input(
       z.object({
-        ticker: z.string().min(1).max(20).transform((value) => value.toUpperCase()),
+        ticker: z
+          .string()
+          .min(1)
+          .max(20)
+          .transform((value) => value.toUpperCase()),
       }),
     )
     .query(async ({ ctx, input }) => {

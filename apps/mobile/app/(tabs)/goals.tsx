@@ -1,13 +1,14 @@
 "use client";
 
+import { Ionicons } from "@expo/vector-icons";
+import { api } from "@finance/api/react";
+import { cn } from "@finance/utils";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { View, Text, FlatList, RefreshControl, SafeAreaView } from "react-native";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@finance/api/react";
-import { Ionicons } from "@expo/vector-icons";
-import { cn } from "@finance/utils";
-import { GoalCard } from "../../components/goals/GoalCard.js";
+
 import { ContributeSheet } from "../../components/goals/ContributeSheet.js";
+import { GoalCard } from "../../components/goals/GoalCard.js";
 
 export default function GoalsScreen(): React.JSX.Element {
   const queryClient = useQueryClient();

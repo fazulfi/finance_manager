@@ -6,6 +6,7 @@ import { createTRPCReact } from "@trpc/react-query";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import superjson from "superjson";
+
 import type { AppRouter } from "./root.js";
 
 export type ApiReact = ReturnType<typeof createTRPCReact<AppRouter>>;

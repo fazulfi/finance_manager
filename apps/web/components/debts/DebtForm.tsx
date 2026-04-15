@@ -35,8 +35,8 @@ type DebtFormValues = {
   dueDate: string;
 };
 
-const DEBT_TYPE_OPTIONS = Object.keys(DebtType).filter(
-  (value) => Number.isNaN(Number(value)),
+const DEBT_TYPE_OPTIONS = Object.keys(DebtType).filter((value) =>
+  Number.isNaN(Number(value)),
 ) as DebtTypeOption[];
 
 interface DebtFormProps {
@@ -44,12 +44,12 @@ interface DebtFormProps {
   debt?: {
     id: string;
     name: string;
-    type: string;
+    type: string | DebtTypeOption;
     totalAmount: number;
     remaining: number;
     interestRate: number;
     minPayment: number;
-    dueDate?: Date | null;
+    dueDate?: Date;
   };
   trigger: ReactNode;
 }
@@ -235,7 +235,7 @@ export function DebtForm({ mode, debt, trigger }: DebtFormProps): React.JSX.Elem
                   <SelectContent>
                     {DEBT_TYPE_OPTIONS.map((option) => (
                       <SelectItem key={option} value={option}>
-                        {option.replaceAll("_", " ")}
+                        {option.replace(/_/g, " ")}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -259,7 +259,9 @@ export function DebtForm({ mode, debt, trigger }: DebtFormProps): React.JSX.Elem
                 {...form.register("totalAmount", { valueAsNumber: true })}
               />
               {form.formState.errors.totalAmount && (
-                <p className="text-xs text-destructive">{form.formState.errors.totalAmount.message}</p>
+                <p className="text-xs text-destructive">
+                  {form.formState.errors.totalAmount.message}
+                </p>
               )}
             </div>
 
@@ -274,7 +276,9 @@ export function DebtForm({ mode, debt, trigger }: DebtFormProps): React.JSX.Elem
                 {...form.register("remaining", { valueAsNumber: true })}
               />
               {form.formState.errors.remaining && (
-                <p className="text-xs text-destructive">{form.formState.errors.remaining.message}</p>
+                <p className="text-xs text-destructive">
+                  {form.formState.errors.remaining.message}
+                </p>
               )}
             </div>
           </div>
@@ -291,7 +295,9 @@ export function DebtForm({ mode, debt, trigger }: DebtFormProps): React.JSX.Elem
                 {...form.register("interestRate", { valueAsNumber: true })}
               />
               {form.formState.errors.interestRate && (
-                <p className="text-xs text-destructive">{form.formState.errors.interestRate.message}</p>
+                <p className="text-xs text-destructive">
+                  {form.formState.errors.interestRate.message}
+                </p>
               )}
             </div>
 
@@ -306,21 +312,33 @@ export function DebtForm({ mode, debt, trigger }: DebtFormProps): React.JSX.Elem
                 {...form.register("minPayment", { valueAsNumber: true })}
               />
               {form.formState.errors.minPayment && (
-                <p className="text-xs text-destructive">{form.formState.errors.minPayment.message}</p>
+                <p className="text-xs text-destructive">
+                  {form.formState.errors.minPayment.message}
+                </p>
               )}
             </div>
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="debt-due-date">Due date (optional)</Label>
-            <Input id="debt-due-date" type="date" disabled={isSubmitting} {...form.register("dueDate")} />
+            <Input
+              id="debt-due-date"
+              type="date"
+              disabled={isSubmitting}
+              {...form.register("dueDate")}
+            />
             {form.formState.errors.dueDate && (
               <p className="text-xs text-destructive">{form.formState.errors.dueDate.message}</p>
             )}
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleOpenChange(false)}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting} className="gap-2">

@@ -1,11 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { api } from "@finance/api/react";
 import { Button, Skeleton, toast, buttonVariants } from "@finance/ui";
 import { AlertCircle, Plus } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+
 import { AccountCard } from "./AccountCard";
+
 import { EmptyState } from "@/components/common/EmptyState";
 
 const PAGE_SIZE = 20;

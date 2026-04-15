@@ -1,21 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import { api } from "@finance/api/react";
 import { Skeleton } from "@finance/ui";
-import { StatCard } from "./StatCard";
-import { Filters } from "./Filters";
-import { IncomeExpenseChart } from "./IncomeExpenseChart";
-import { CategoryBreakdown } from "./CategoryBreakdown";
-import { BudgetProgressChart } from "./BudgetProgressChart";
-import { CashFlowChart } from "./CashFlowChart";
-import { QuickActions } from "./QuickActions";
-import { TransactionItem } from "@/components/transactions/TransactionItem";
-import { InsightsPanel } from "./InsightsPanel";
-import { TrendAnalysis } from "./TrendAnalysis";
+import { useMemo, useState } from "react";
+
 import { BudgetRecommendations } from "./BudgetRecommendations";
 import { AnomalyDetection } from "./AnomalyDetection";
+import { BudgetProgressChart } from "./BudgetProgressChart";
+import { CashFlowChart } from "./CashFlowChart";
+import { CategoryBreakdown } from "./CategoryBreakdown";
+import { Filters } from "./Filters";
+import { IncomeExpenseChart } from "./IncomeExpenseChart";
+import { InsightsPanel } from "./InsightsPanel";
+import { QuickActions } from "./QuickActions";
+import { StatCard } from "./StatCard";
+import { TrendAnalysis } from "./TrendAnalysis";
+
 import { EmptyState } from "@/components/common/EmptyState";
+import { TransactionItem } from "@/components/transactions/TransactionItem";
 
 interface FilterState {
   dateFrom: Date | null;

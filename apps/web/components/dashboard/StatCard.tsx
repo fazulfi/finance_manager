@@ -1,7 +1,7 @@
 // apps/web/components/dashboard/StatCard.tsx
-import * as React from "react";
 import { cn } from "@finance/utils";
 import { TrendingUp, TrendingDown, Activity } from "lucide-react";
+import * as React from "react";
 
 interface StatCardProps {
   title: string;

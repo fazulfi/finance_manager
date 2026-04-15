@@ -1,4 +1,8 @@
 // apps/mobile/components/goals/GoalCard.tsx
+import { Ionicons } from "@expo/vector-icons";
+import type { SavingsGoal } from "@finance/types";
+import { GoalStatus } from "@finance/types";
+import { cn } from "@finance/utils";
 import React, { useState } from "react";
 import { View, Text } from "react-native";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
@@ -9,10 +13,6 @@ import Animated, {
   withTiming,
   runOnJS,
 } from "react-native-reanimated";
-import { Ionicons } from "@expo/vector-icons";
-import type { SavingsGoal } from "@finance/types";
-import { GoalStatus } from "@finance/types";
-import { cn } from "@finance/utils";
 
 interface GoalCardProps {
   goal: SavingsGoal;

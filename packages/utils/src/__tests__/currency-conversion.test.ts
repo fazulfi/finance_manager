@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import { CurrencyCode, type ExchangeRate } from "@finance/types";
+import { describe, expect, it } from "vitest";
 
 import {
   convertAmount,

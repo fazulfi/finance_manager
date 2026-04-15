@@ -1,9 +1,9 @@
 // apps/web/components/dashboard/QuickActions.tsx
 "use client";
 
+import { Button } from "@finance/ui";
 import { Plus, ArrowLeftRight, PieChart, FolderOpen } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Button } from "@finance/ui";
 
 interface QuickAction {
   label: string;

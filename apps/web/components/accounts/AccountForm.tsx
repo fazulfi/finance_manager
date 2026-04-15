@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { api } from "@finance/api/react";
 import {
   Button,
@@ -20,7 +18,9 @@ import {
   toast,
   buttonVariants,
 } from "@finance/ui";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
@@ -34,13 +34,17 @@ const ACCOUNT_TYPE_OPTIONS = [
   "OTHER",
 ] as const;
 
-const accountFormSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100, "Name too long"),
-  description: z.string().max(500, "Description too long").optional(),
-  type: z.enum(ACCOUNT_TYPE_OPTIONS),
-  currency: z.string().min(1, "Currency is required").max(10, "Currency too long"),
-  initialBalance: z.coerce.number().min(0, "Initial balance cannot be negative"),
-});
+const accountFormSchema = z
+  .object({
+    name: z.string().min(1, "Name is required").max(100, "Name too long"),
+    description: z.string().max(500, "Description too long").optional(),
+    type: z.enum(ACCOUNT_TYPE_OPTIONS),
+    currency: z.string().min(1, "Currency is required").max(10, "Currency too long"),
+    initialBalance: z.coerce.number().min(0, "Initial balance cannot be negative"),
+  })
+  .refine((data) => ["USD", "IDR", "EUR", "SGD", "JPY"].includes(data.currency), {
+    message: "Invalid currency code",
+  });
 
 type AccountFormValues = z.infer<typeof accountFormSchema>;
 
@@ -131,7 +135,7 @@ export function AccountForm({
       name: values.name,
       description: values.description || undefined,
       type: values.type,
-      currency: values.currency,
+      currency: values.currency as "USD" | "IDR" | "EUR" | "SGD" | "JPY",
       initialBalance: values.initialBalance,
     });
   };

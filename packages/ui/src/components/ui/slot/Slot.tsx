@@ -1,5 +1,5 @@
-import * as React from "react";
 import { Root as RadixRoot } from "@radix-ui/react-slot";
+import * as React from "react";
 
 export type SlotProps = React.ComponentProps<typeof RadixRoot>;
 

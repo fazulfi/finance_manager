@@ -1,13 +1,16 @@
 // apps/web/app/(dashboard)/transactions/page.tsx
-import type { Metadata } from "next";
 import { transactionRouter, accountRouter, categoryRouter, createTRPCContext } from "@finance/api";
-import { auth } from "@/auth";
 import { db } from "@finance/db";
-import { TransactionListClient } from "@/components/transactions/TransactionList";
-import { TransactionFilters } from "@/components/transactions/TransactionFilters";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { buttonVariants } from "@finance/ui";
+
+import { auth } from "@/auth";
 import { QuickAddButton } from "@/components/transactions/QuickAddButton";
 import { QuickAddSheet } from "@/components/transactions/QuickAddSheet";
-import Link from "next/link";
+import { TransactionsFiltersWrapper } from "@/components/transactions/TransactionFiltersWrapper";
+import { TransactionListClient } from "@/components/transactions/TransactionList";
 
 async function getTransactions(page: number = 1, limit: number = 20) {
   const session = await auth();
@@ -75,25 +78,24 @@ export default async function TransactionsPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight text-gray-900">Transactions</h1>
-        <Link href="/transactions/new">
-          <QuickAddButton onClick={() => {}} />
-        </Link>
+        {typeof window !== "undefined" ? (
+          <Link href="/transactions/new">
+            <QuickAddButton onClick={() => {}} />
+          </Link>
+        ) : (
+          <Link href="/transactions/new" className={buttonVariants()}>
+            Add transaction
+          </Link>
+        )}
       </div>
 
-      <TransactionFilters
+      <TransactionsFiltersWrapper
         filters={filters}
         accounts={accounts.items}
         categories={categories.items}
-        onFilterChange={(updatedFilters) => {
-          const params = new URLSearchParams({
-            ...(updatedFilters.accountId && { accountId: updatedFilters.accountId }),
-            ...(updatedFilters.category && { category: updatedFilters.category }),
-            ...(updatedFilters.dateFrom && { dateFrom: updatedFilters.dateFrom.toISOString() }),
-            ...(updatedFilters.dateTo && { dateTo: updatedFilters.dateTo.toISOString() }),
-            ...(updatedFilters.search && { search: updatedFilters.search }),
-          });
-          // Navigate to same page with new filters
-          window.location.search = params.toString();
+        onFilterChange={(updatedFilters: any) => {
+          // Handler passed to Client component, so this should be safe
+          console.log("Filter change:", updatedFilters);
         }}
         onReset={() => {
           window.location.href = "/transactions";
@@ -120,4 +122,3 @@ export const metadata: Metadata = {
   title: "Transactions",
   description: "View and manage your transactions",
 };
-

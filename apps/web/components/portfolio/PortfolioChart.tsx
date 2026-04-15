@@ -1,5 +1,6 @@
 "use client";
 
+import type { PortfolioHolding } from "@finance/types";
 import {
   PieChart,
   Pie,
@@ -8,7 +9,6 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import type { PortfolioHolding } from "@finance/types";
 
 const COLORS = [
   "#3b82f6", // blue-500

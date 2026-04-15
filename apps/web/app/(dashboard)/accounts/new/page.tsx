@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+
 import { AccountForm } from "@/components/accounts/AccountForm";
 
 export const metadata: Metadata = {

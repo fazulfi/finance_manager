@@ -1,6 +1,7 @@
 // packages/api/src/routers/auth.ts
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+
 import { router, publicProcedure, protectedProcedure } from "../trpc.js";
 
 export const authRouter = router({
@@ -77,6 +78,18 @@ const DEFAULT_EXPENSE_CATEGORIES = [
 ];
 
 export async function seedDefaultCategories(db: any, userId: string): Promise<void> {
+  const existingDefaultCount = await db.category.count({
+    where: {
+      userId,
+      type: "EXPENSE",
+      isDefault: true,
+    },
+  });
+
+  if (existingDefaultCount > 0) {
+    return;
+  }
+
   await db.category.createMany({
     data: DEFAULT_EXPENSE_CATEGORIES.map((cat) => ({
       userId,
@@ -87,6 +100,5 @@ export async function seedDefaultCategories(db: any, userId: string): Promise<vo
       isDefault: true,
       usageCount: 0,
     })),
-    skipDuplicates: true,
   });
 }

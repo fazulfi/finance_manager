@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { api } from "@finance/api/react";
 import {
   Button,
@@ -17,7 +16,9 @@ import {
   toast,
 } from "@finance/ui";
 import { AlertCircle, Plus } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
+
 import { ProjectForm } from "./ProjectForm";
 
 type ProjectStatus = "ACTIVE" | "COMPLETED" | "PAUSED" | "CANCELLED";

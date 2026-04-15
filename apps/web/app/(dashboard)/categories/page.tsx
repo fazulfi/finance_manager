@@ -1,8 +1,11 @@
+"use client";
+
 // apps/web/app/(dashboard)/categories/page.tsx
-import Link from "next/link";
-import { CategoryManager } from "@/components/categories/CategoryManager";
 import { buttonVariants } from "@finance/ui";
 import { Plus } from "lucide-react";
+import Link from "next/link";
+
+import { CategoryManager } from "@/components/categories/CategoryManager";
 
 export default function CategoriesPage(): React.JSX.Element {
   return (
@@ -36,8 +39,3 @@ export default function CategoriesPage(): React.JSX.Element {
     </div>
   );
 }
-
-export const metadata = {
-  title: "Categories",
-  description: "Manage your expense categories",
-};

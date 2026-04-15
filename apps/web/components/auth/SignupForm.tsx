@@ -1,10 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { signIn } from "next-auth/react";
-import { AlertCircle, Loader2 } from "lucide-react";
 import {
   Button,
   Card,
@@ -16,6 +11,12 @@ import {
   Input,
   Label,
 } from "@finance/ui";
+import { AlertCircle, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { useState } from "react";
+
 import GoogleButton from "@/components/auth/GoogleButton";
 
 export default function SignupForm() {
@@ -65,12 +66,20 @@ export default function SignupForm() {
         body: JSON.stringify(body),
       });
 
+      const errorPayload = (await res.json().catch(() => null)) as {
+        error?: string;
+        issues?: unknown;
+      } | null;
+
       if (res.status === 409) {
-        setGlobalError("An account with this email already exists. Try signing in instead.");
+        setGlobalError(
+          errorPayload?.error ??
+            "An account with this email already exists. Try signing in instead.",
+        );
         return;
       }
       if (!res.ok) {
-        setGlobalError("Something went wrong. Please try again.");
+        setGlobalError(errorPayload?.error ?? "Something went wrong. Please try again.");
         return;
       }
 

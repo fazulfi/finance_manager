@@ -2,8 +2,9 @@
 
 import { api } from "@finance/api/react";
 import { type Project, ProjectStatus } from "@finance/types";
-import { BudgetProgress } from "./BudgetProgress";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Skeleton } from "@finance/ui";
+
+import { BudgetProgress } from "./BudgetProgress";
 
 interface ProjectBudgetProps {
   project: Project;

@@ -1,9 +1,9 @@
 // apps/web/components/transactions/QuickAddButton.tsx
 "use client";
 
+import { Button } from "@finance/ui";
 import { cn } from "@finance/utils";
 import { Plus } from "lucide-react";
-import { Button } from "@finance/ui";
 
 interface QuickAddButtonProps {
   onClick: () => void;

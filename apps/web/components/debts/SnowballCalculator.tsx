@@ -1,18 +1,29 @@
 "use client";
 
 import { api } from "@finance/api/react";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Skeleton } from "@finance/ui";
+import type { DebtType } from "@finance/types";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Skeleton,
+} from "@finance/ui";
 import { useState } from "react";
 
 interface SnowballDebt {
   id: string;
   name: string;
-  type: string;
+  type: DebtType;
   totalAmount: number;
   remaining: number;
   interestRate: number;
   minPayment: number;
-  dueDate?: Date | null;
+  dueDate: Date;
 }
 
 function formatMoney(value: number): string {
@@ -61,7 +72,12 @@ export function SnowballCalculator({ debts }: { debts: SnowballDebt[] }): React.
           />
         </div>
 
-        <Button type="button" className="w-full" onClick={handleCalculate} disabled={debts.length === 0}>
+        <Button
+          type="button"
+          className="w-full"
+          onClick={handleCalculate}
+          disabled={debts.length === 0}
+        >
           Calculate
         </Button>
 
@@ -85,13 +101,17 @@ export function SnowballCalculator({ debts }: { debts: SnowballDebt[] }): React.
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Total interest
                 </p>
-                <p className="font-mono text-lg tabular-nums">{formatMoney(snowballQuery.data.totalInterest)}</p>
+                <p className="font-mono text-lg tabular-nums">
+                  {formatMoney(snowballQuery.data.totalInterest)}
+                </p>
               </div>
               <div className="rounded-lg border p-3">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Total months
                 </p>
-                <p className="font-mono text-lg tabular-nums">{snowballQuery.data.totalMonths ?? "—"}</p>
+                <p className="font-mono text-lg tabular-nums">
+                  {snowballQuery.data.totalMonths ?? "—"}
+                </p>
               </div>
             </div>
 
@@ -100,9 +120,12 @@ export function SnowballCalculator({ debts }: { debts: SnowballDebt[] }): React.
                 <div key={item.debtId} className="rounded-lg border p-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="font-medium">#{item.order} {item.name}</p>
+                      <p className="font-medium">
+                        #{item.order} {item.name}
+                      </p>
                       <p className="text-sm text-muted-foreground">
-                        Payoff date: {item.payoffDate ? new Date(item.payoffDate).toLocaleDateString() : "—"}
+                        Payoff date:{" "}
+                        {item.payoffDate ? new Date(item.payoffDate).toLocaleDateString() : "—"}
                       </p>
                     </div>
                     <div className="text-right text-sm">

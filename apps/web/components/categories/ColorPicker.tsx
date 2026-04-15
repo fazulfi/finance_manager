@@ -2,6 +2,7 @@
 
 import { cn } from "@finance/utils";
 import { type InputHTMLAttributes, useState } from "react";
+
 import { type ColorPickerProps } from "./types";
 
 const COLORS = [

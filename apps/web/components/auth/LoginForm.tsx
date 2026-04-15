@@ -1,10 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { signIn } from "next-auth/react";
-import { AlertCircle, Loader2 } from "lucide-react";
 import {
   Button,
   Card,
@@ -16,6 +11,12 @@ import {
   Input,
   Label,
 } from "@finance/ui";
+import { AlertCircle, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { useState } from "react";
+
 import GoogleButton from "@/components/auth/GoogleButton";
 
 export default function LoginForm() {
@@ -40,7 +41,12 @@ export default function LoginForm() {
         setError("Invalid email or password. Please try again.");
       } else {
         const raw = searchParams.get("callbackUrl") ?? "/dashboard";
-        const callbackUrl = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
+        const callbackUrl =
+          raw === "/"
+            ? "/dashboard"
+            : raw.startsWith("/") && !raw.startsWith("//")
+              ? raw
+              : "/dashboard";
         router.push(callbackUrl);
       }
     } catch {

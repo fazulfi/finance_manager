@@ -1,11 +1,12 @@
 // apps/web/app/(dashboard)/budget/page.tsx
 // Budget page Server Component - displays all budgets with overview and management
 
-import type { Metadata } from "next";
-import { BudgetOverview } from "@/components/budget/BudgetOverview";
-import Link from "next/link";
-import { Plus } from "lucide-react";
 import { Button } from "@finance/ui";
+import { Plus } from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+
+import { BudgetOverview } from "@/components/budget/BudgetOverview";
 
 export const metadata: Metadata = {
   title: "Budgets",

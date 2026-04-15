@@ -4,11 +4,11 @@
 // The accounts collection is reserved for the finance Account model,
 // so we manually upsert users in the signIn callback instead of using @auth/prisma-adapter.
 
-import NextAuth, { type NextAuthResult } from "next-auth";
-import Google from "next-auth/providers/google";
-import Credentials from "next-auth/providers/credentials";
 import { db } from "@finance/db";
 import bcrypt from "bcryptjs";
+import NextAuth, { type NextAuthResult } from "next-auth";
+import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 import { z } from "zod";
 
 const credentialsSchema = z.object({
@@ -59,7 +59,7 @@ const result: NextAuthResult = NextAuth({
           id: user.id,
           email: user.email,
           name: user.name ?? null,
-          image: user.image ?? null,
+          image: user.image && user.image.trim() !== "" ? user.image : null,
         };
       },
     }),
@@ -82,7 +82,7 @@ const result: NextAuthResult = NextAuth({
           create: {
             email: user.email,
             name: user.name ?? null,
-            image: user.image ?? null,
+            image: user.image && user.image.trim() !== "" ? user.image : null,
           },
         });
 
@@ -110,6 +110,12 @@ const result: NextAuthResult = NextAuth({
       if (token.id && typeof token.id === "string") {
         session.user.id = token.id;
       }
+
+      // Remove image field if null/undefined to prevent NextAuth avatar loading errors
+      if (!session.user.image) {
+        delete session.user.image;
+      }
+
       return session;
     },
   },

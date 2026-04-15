@@ -1,6 +1,7 @@
 // packages/api/src/routers/category.ts
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+
 import { router, protectedProcedure, objectId } from "../trpc.js";
 
 const CategoryTypeEnum = z.enum(["INCOME", "EXPENSE"]);

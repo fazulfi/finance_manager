@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import { api } from "@finance/api/react";
-import { currencyEnum } from "@finance/types";
-import { formatCurrency } from "@finance/utils";
+import type { currencyEnum } from "@finance/types";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "@finance/ui";
+import { formatCurrency } from "@finance/utils";
+import { useMemo, useState } from "react";
 
 import { CurrencySelector } from "./CurrencySelector";
 

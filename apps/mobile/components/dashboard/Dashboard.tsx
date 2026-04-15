@@ -1,11 +1,11 @@
 // apps/mobile/components/dashboard/Dashboard.tsx
+import { Ionicons } from "@expo/vector-icons";
+import { api } from "@finance/api/react";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import React from "react";
 import { View, Text, StyleSheet, Dimensions } from "react-native";
 import { TouchableOpacity } from "react-native";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@finance/api/react";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ChartCard } from "./ChartCard.js";

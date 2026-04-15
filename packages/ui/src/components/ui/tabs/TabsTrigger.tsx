@@ -1,5 +1,5 @@
-import * as React from "react";
 import { Trigger as RadixTrigger } from "@radix-ui/react-tabs";
+import * as React from "react";
 
 export type TabsTriggerProps = React.ComponentProps<typeof RadixTrigger>;
 

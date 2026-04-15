@@ -17,8 +17,9 @@ import {
 } from "@finance/ui";
 import { AlertCircle, Plus } from "lucide-react";
 import { useState } from "react";
-import { GoalForm } from "./GoalForm";
+
 import { GoalCard } from "./GoalCard";
+import { GoalForm } from "./GoalForm";
 
 export interface GoalSummary {
   id: string;

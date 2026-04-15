@@ -1,8 +1,9 @@
 // apps/mobile/app/categories.tsx
 import { Suspense } from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { api } from "../utils/trpc";
+
 import { CategoryGrid } from "../components/categories/CategoryGrid";
+import { api } from "../utils/trpc";
 // Skeleton component for loading state
 function CategoryGridSkeleton() {
   return (

@@ -1,7 +1,7 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { api } from "@finance/api/react";
+import { type Category, CategoryType } from "@finance/types";
 import {
   Button,
   Dialog,
@@ -18,13 +18,15 @@ import {
   toast,
   buttonVariants,
 } from "@finance/ui";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
-import { IconPicker } from "./IconPicker";
+
 import { ColorPicker } from "./ColorPicker";
-import { type Category, CategoryType } from "@finance/types";
+import { IconPicker } from "./IconPicker";
+
 
 // Category type values are strings for Zod compatibility ("INCOME" | "EXPENSE")
 type CategoryTypeValue = "INCOME" | "EXPENSE";

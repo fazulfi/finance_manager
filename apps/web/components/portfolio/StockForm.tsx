@@ -1,10 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { api } from "@finance/api/react";
+import type { PortfolioHolding } from "@finance/types";
 import {
   Button,
   Dialog,
@@ -20,8 +17,11 @@ import {
   SelectValue,
   toast,
 } from "@finance/ui";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Search } from "lucide-react";
-import type { PortfolioHolding } from "@finance/types";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
 const stockFormSchema = z.object({
   ticker: z.string().min(1, "Ticker is required").max(20).toUpperCase(),
@@ -37,7 +37,7 @@ interface StockFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Pass holding to edit an existing position */
-  holding?: PortfolioHolding;
+  holding: PortfolioHolding | undefined;
   onSuccess?: () => void;
 }
 
@@ -54,8 +54,8 @@ export function StockForm({ open, onOpenChange, holding, onSuccess }: StockFormP
   const utils = api.useContext();
   const isEdit = !!holding;
 
-  const { data: searchResults, isFetching: isSearching } = api.stock.searchYahoo.useQuery(
-    { query: searchQuery },
+  const { data: searchResults, isFetching: isSearching } = api.stock.search.useQuery(
+    { searchQuery, limit: 10 },
     { enabled: searchQuery.length >= 2, keepPreviousData: true },
   );
 
@@ -191,9 +191,7 @@ export function StockForm({ open, onOpenChange, holding, onSuccess }: StockFormP
                 disabled={isEdit}
                 className="uppercase"
               />
-              {errors.ticker && (
-                <p className="text-xs text-destructive">{errors.ticker.message}</p>
-              )}
+              {errors.ticker && <p className="text-xs text-destructive">{errors.ticker.message}</p>}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="exchange">Exchange</Label>

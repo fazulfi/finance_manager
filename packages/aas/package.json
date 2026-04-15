@@ -1,0 +1,39 @@
+{
+  "name": "@finance/aas",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "bin": {
+    "start-aas": "../bin/start-aas",
+    "run-agent": "../bin/run-agent"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src/ --max-warnings 0"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "pino": "^9.6.0",
+    "pino-pretty": "^11.3.0",
+    "chalk": "^5.4.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.3",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@finance/eslint-config": "workspace:*",
+    "@finance/tsconfig": "workspace:*",
+    "@types/node": "^20.0.0",
+    "@types/pino": "^7.0.5",
+    "@types/pino-pretty": "^5.0.0",
+    "@types/commander": "^2.12.5",
+    "@types/chalk": "^2.2.0",
+    "typescript": "^5.6.3"
+  }
+}

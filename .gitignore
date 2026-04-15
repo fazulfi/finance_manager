@@ -17,6 +17,8 @@ web-build/
 
 # Testing
 coverage/
+apps/web/playwright-report/
+apps/web/test-results/
 
 # Environment (never commit real secrets)
 .env

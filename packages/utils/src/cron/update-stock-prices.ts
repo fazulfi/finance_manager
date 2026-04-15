@@ -6,8 +6,9 @@
 // IDX market close: 16:15 WIB (09:15 UTC)
 // Schedule suggestion: "15 9 * * 1-5"  (Mon-Fri, 09:15 UTC)
 
-import { getStockPrices } from "../stock-api.js";
 import { db } from "@finance/db";
+
+import { getStockPrices } from "../stock-api.js";
 
 interface UpdateResult {
   userId: string;

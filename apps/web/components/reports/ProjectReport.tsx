@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@finance/ui";
 import { formatCurrency } from "@finance/utils";
+
 import type { GeneratedReport } from "./types";
 
 function money(amount: number): string {

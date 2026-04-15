@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
 import { api } from "@finance/api/react";
+import type { PortfolioHolding } from "@finance/types";
 import {
   Button,
   Card,
@@ -15,23 +14,17 @@ import {
   Skeleton,
   toast,
 } from "@finance/ui";
-import {
-  ArrowLeft,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Plus,
-  Trash2,
-  Calendar,
-} from "lucide-react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { format } from "date-fns";
+import { ArrowLeft, TrendingUp, TrendingDown, Minus, Plus, Trash2, Calendar } from "lucide-react";
 import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+
 import { PriceChart } from "@/components/portfolio/PriceChart";
 import { StockForm } from "@/components/portfolio/StockForm";
-import { format } from "date-fns";
-import type { PortfolioHolding } from "@finance/types";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 
 const dividendSchema = z.object({
   amount: z.coerce.number().positive("Amount must be positive"),
@@ -241,14 +234,11 @@ export default function StockDetailPage() {
             <div>
               <CardTitle className="text-base">Dividends</CardTitle>
               <CardDescription>
-                Total received: <span className="font-semibold text-foreground">{formatIDR(totalDivAmount)}</span>
+                Total received:{" "}
+                <span className="font-semibold text-foreground">{formatIDR(totalDivAmount)}</span>
               </CardDescription>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowDivForm((p) => !p)}
-            >
+            <Button size="sm" variant="outline" onClick={() => setShowDivForm((p) => !p)}>
               <Plus className="mr-1.5 h-3.5 w-3.5" />
               Add
             </Button>
@@ -278,9 +268,7 @@ export default function StockDetailPage() {
                 <div className="space-y-1.5">
                   <Label htmlFor="div-date">Date</Label>
                   <Input id="div-date" type="date" {...register("date")} />
-                  {errors.date && (
-                    <p className="text-xs text-destructive">{errors.date.message}</p>
-                  )}
+                  {errors.date && <p className="text-xs text-destructive">{errors.date.message}</p>}
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -295,7 +283,10 @@ export default function StockDetailPage() {
                   type="button"
                   size="sm"
                   variant="ghost"
-                  onClick={() => { setShowDivForm(false); reset(); }}
+                  onClick={() => {
+                    setShowDivForm(false);
+                    reset();
+                  }}
                 >
                   Cancel
                 </Button>
@@ -330,7 +321,7 @@ export default function StockDetailPage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => deleteDividend.mutate({ id: div.id })}
+                    onClick={() => deleteDividend.mutate({ dividendId: div.id })}
                     disabled={deleteDividend.isLoading}
                     className="p-1.5 rounded hover:bg-rose-50 text-muted-foreground hover:text-rose-600 transition-colors"
                   >

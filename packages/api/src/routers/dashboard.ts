@@ -1,6 +1,4 @@
 // packages/api/src/routers/dashboard.ts
-import { z } from "zod";
-import { router, protectedProcedure } from "../trpc.js";
 import type { DashboardAnalyticsAI } from "@finance/types";
 import {
   buildBudgetRecommendations,
@@ -10,7 +8,10 @@ import {
   detectTrends,
   forecastSpending,
 } from "@finance/utils";
+import { z } from "zod";
+
 import { getOpenRouterSuggestions } from "../lib/openrouter.js";
+import { router, protectedProcedure } from "../trpc.js";
 
 export const dashboardRouter = router({
   /**

@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { useFormField } from "./useFormField";
+
 import { cn } from "../../lib/utils";
+
+import { useFormField } from "./useFormField";
 
 export interface FormLabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {
   required?: boolean;

@@ -5,15 +5,38 @@
     "declaration": false,
     "declarationMap": false,
     "paths": {
-      "@/*": ["./components/*", "./app/*"],
-      "@finance/types": ["../../packages/types/src/index.ts"],
-      "@finance/utils": ["../../packages/utils/src/index.ts"],
-      "@finance/api": ["../../packages/api/src/index.ts"],
-      "@finance/api/react": ["../../packages/api/src/react.tsx"],
-      "@finance/db": ["../../packages/db/src/index.ts"]
+      "@/*": [
+        "./components/*",
+        "./app/*"
+      ],
+      "@finance/types": [
+        "../../packages/types/src/index.ts"
+      ],
+      "@finance/utils": [
+        "../../packages/utils/src/index.ts"
+      ],
+      "@finance/api": [
+        "../../packages/api/src/index.ts"
+      ],
+      "@finance/api/react": [
+        "../../packages/api/src/react.tsx"
+      ],
+      "@finance/db": [
+        "../../packages/db/src/index.ts"
+      ]
     },
-    "types": ["nativewind/types"]
+    "types": [
+      "nativewind/types"
+    ]
   },
-  "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "nativewind-env.d.ts",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

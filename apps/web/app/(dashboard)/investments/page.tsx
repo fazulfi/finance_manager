@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import { api } from "@finance/api/react";
 import {
   Button,
@@ -17,6 +16,7 @@ import {
   Skeleton,
 } from "@finance/ui";
 import { CircleDollarSign, PieChart as PieChartIcon, Plus, TrendingDown, TrendingUp } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { AssetAllocation } from "@/components/investments/AssetAllocation";
 import { InvestmentCard } from "@/components/investments/InvestmentCard";

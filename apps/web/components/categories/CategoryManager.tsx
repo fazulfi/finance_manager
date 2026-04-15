@@ -1,6 +1,7 @@
 "use client";
 
 import { api } from "@finance/api/react";
+import { type Category, CategoryType } from "@finance/types";
 import {
   Button,
   Card,
@@ -15,8 +16,8 @@ import {
 } from "@finance/ui";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { useState } from "react";
+
 import { CategoryForm } from "./CategoryForm";
-import { type Category, CategoryType } from "@finance/types";
 
 interface CategoryManagerProps {
   categories: Category[]; // With usageCount field

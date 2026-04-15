@@ -1,8 +1,9 @@
 "use client";
 
 import { api } from "@finance/api/react";
-import { BudgetProgress } from "./BudgetProgress";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Skeleton } from "@finance/ui";
+
+import { BudgetProgress } from "./BudgetProgress";
 
 interface BudgetOverviewProps {
   filter?: "all" | "monthly" | "annual" | "custom";

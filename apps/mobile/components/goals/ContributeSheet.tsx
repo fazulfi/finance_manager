@@ -1,8 +1,8 @@
 // apps/mobile/components/goals/ContributeSheet.tsx
-import React, { useState, useTransition } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import type { SavingsGoal } from "@finance/types";
 import { cn } from "@finance/utils";
+import React, { useState, useTransition } from "react";
 import {
   Modal,
   View,

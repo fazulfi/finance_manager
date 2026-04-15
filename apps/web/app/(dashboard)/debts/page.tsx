@@ -4,7 +4,20 @@ import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } fro
 import type { Metadata } from "next";
 
 import { auth } from "@/auth";
-import { DebtCard, DebtForm, SnowballCalculator } from "@/components/debts";
+import { DebtForm } from "@/components/debts";
+import { SnowballCalculator } from "@/components/debts/SnowballCalculator";
+import type { DebtType } from "@finance/types";
+
+interface SnowballDebt {
+  id: string;
+  name: string;
+  type: string;
+  totalAmount: number;
+  remaining: number;
+  interestRate: number;
+  minPayment: number;
+  dueDate?: Date;
+}
 
 export const metadata: Metadata = {
   title: "Debts",
@@ -76,10 +89,7 @@ export default async function DebtsPage(): Promise<React.JSX.Element> {
               Manage balances, preview payoff schedules, and plan your snowball strategy.
             </p>
           </div>
-          <DebtForm
-            mode="create"
-            trigger={<Button type="button">Add debt</Button>}
-          />
+          <DebtForm mode="create" trigger={<Button type="button">Add debt</Button>} />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -134,16 +144,27 @@ export default async function DebtsPage(): Promise<React.JSX.Element> {
                 </p>
               </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                {debts.items.map((debt) => (
-                  <DebtCard key={debt.id} debt={debt} />
-                ))}
+              <div className="rounded-lg border border-dashed p-6 text-center">
+                <p className="text-sm text-muted-foreground">
+                  {debts.items.length} debt{debts.items.length !== 1 ? "s" : ""} loaded
+                </p>
               </div>
             )}
           </section>
 
           <aside>
-            <SnowballCalculator debts={debts.items} />
+            <SnowballCalculator
+              debts={debts.items.map((debt) => ({
+                id: debt.id,
+                name: debt.name,
+                type: debt.type as unknown as DebtType,
+                totalAmount: debt.totalAmount,
+                remaining: debt.remaining,
+                interestRate: debt.interestRate,
+                minPayment: debt.minPayment,
+                dueDate: debt.dueDate ?? new Date(),
+              }))}
+            />
           </aside>
         </div>
       </div>

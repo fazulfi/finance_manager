@@ -1,6 +1,6 @@
 // packages/api/src/trpc.ts
-import { initTRPC, TRPCError } from "@trpc/server";
 import type { db as defaultDb } from "@finance/db";
+import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { z, ZodError } from "zod";
 

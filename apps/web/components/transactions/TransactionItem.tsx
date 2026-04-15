@@ -1,7 +1,7 @@
 // apps/web/components/transactions/TransactionItem.tsx
-import { ChevronRight, Circle } from "lucide-react";
 import { cn } from "@finance/ui";
 import { formatCurrency } from "@finance/utils";
+import { ChevronRight, Circle } from "lucide-react";
 
 interface TransactionItemProps {
   transaction: {

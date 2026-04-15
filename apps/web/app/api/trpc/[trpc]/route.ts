@@ -1,11 +1,13 @@
 // apps/web/app/api/trpc/[trpc]/route.ts
 // tRPC HTTP handler — wires NextAuth session + Prisma db into createTRPCContext.
-import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import type { TRPCError } from "@trpc/server";
-import type { NextRequest } from "next/server";
-import { auth } from "@/auth";
-import { db } from "@finance/db";
 import { appRouter, createTRPCContext } from "@finance/api";
+import { db } from "@finance/db";
+import type { TRPCError } from "@trpc/server";
+import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
+import type { NextRequest } from "next/server";
+
+import { auth } from "@/auth";
+
 
 const handler = async (req: NextRequest): Promise<Response> => {
   const session = await auth();

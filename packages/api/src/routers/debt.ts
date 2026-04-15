@@ -1,5 +1,5 @@
 // packages/api/src/routers/debt.ts
-import { TRPCError } from "@trpc/server";
+import { debtFormSchema, debtSnowballExtraPaymentSchema } from "@finance/types";
 import {
   calculateDebtSnowball,
   debtPayoff,
@@ -8,8 +8,9 @@ import {
   monthlyInterestAmount,
   projectedDebtPayoffDate,
 } from "@finance/utils";
-import { debtFormSchema, debtSnowballExtraPaymentSchema } from "@finance/types";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+
 import { router, protectedProcedure, objectId } from "../trpc.js";
 
 const DebtTypeEnum = z.enum([

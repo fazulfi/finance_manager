@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { cn } from "@finance/ui";
+import type { ReactNode } from "react";
 
 interface EmptyStateProps {
   title: string;

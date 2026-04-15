@@ -1,4 +1,7 @@
 // apps/mobile/components/dashboard/TransactionsList.tsx
+import { Ionicons } from "@expo/vector-icons";
+import type { Transaction } from "@finance/types";
+import * as Haptics from "expo-haptics";
 import React, { useState } from "react";
 import {
   View,
@@ -16,9 +19,6 @@ import Animated, {
   FadeIn,
   FadeInDown,
 } from "react-native-reanimated";
-import * as Haptics from "expo-haptics";
-import { Ionicons } from "@expo/vector-icons";
-import type { Transaction } from "@finance/types";
 
 interface TransactionItemProps {
   transaction: Transaction;
