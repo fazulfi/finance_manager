@@ -9,6 +9,7 @@ Personal finance monorepo with shared web, mobile, API, and database packages.
 - Prisma + MongoDB data layer in `packages/db`
 - Shared tRPC package in `packages/api` with server-safe root exports
 - Client-only React helpers isolated behind `@finance/api/react`
+- AAS orchestrator core in `@finance/aas` with briefing/task-context modules, fail-closed quality-gate hooks, and bounded plan/briefing payload handling
 - Debt router plus category and stock procedure coverage for CRUD-style finance flows
 - Account management flow with paginated list/detail/create/update/delete and atomic same-currency transfers
 - Project tagging system (`Transaction.project` = ObjectId-or-null) with project analytics and derived progress updates

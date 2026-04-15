@@ -90,16 +90,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [AAS] Implement core communication components for agent execution, parsing, queueing, and parallel orchestration (`agent-client`, `agent-runner`, `agent-result-parser`, `task-queue`, `parallel-execution-engine`) (file: packages/aas/src/core/agent-client.ts)
 - [AAS] Add AAS-focused test coverage with 6 test files and 16 passing tests across core communication flows (file: packages/aas/src/**tests**/agent-client.test.ts)
 - [AAS] Add package build script for `@finance/aas` to standardize build pipeline checks (file: packages/aas/package.json)
+- [AAS] Add Phase 3 orchestrator core modules: `AASOrchestrator`, `BriefingEngine`, and task-context builder for gated orchestration flow (file: packages/aas/src/orchestrator.ts)
+- [AAS] Add Phase 3 orchestrator test suite (`orchestrator`, `briefing-engine`, `task-context`) and refresh CLI integration tests (file: packages/aas/src/orchestrator.test.ts)
 
 ### Changed
 
 - [Workflow] Document local-only agent workspace policy: `.opencode/` and `.kilo/` should stay untracked (file: README.md)
 - [AAS] Update CLI integration entrypoints to use the new core communication pipeline (`bin/run-agent`, `bin/start-aas`) (file: bin/run-agent.ts)
 - [Verification] Confirm `@finance/aas` build, type-check, lint, and test pass; document full monorepo `pnpm build` failure as Windows EPERM symlink in `@finance/web` (informational, out-of-scope) (file: .opencode/CURRENT_CONTEXT.md)
+- [AAS] Wire orchestrator flow into CLI entrypoints and package exports/types (`start-aas`, `run-agent`, extensionless wrappers, `types.ts`, `index.ts`) (file: bin/start-aas.ts)
+- [Verification] Record Phase 3 verification for `@finance/aas`: type-check PASS, lint PASS (minor non-blocking react detect warning), test PASS (9 files, 24 tests), build PASS, and CLI help PASS for both commands (file: .opencode/CURRENT_CONTEXT.md)
 
 ### Security
 
 - [Security] Harden AAS agent client execution with environment allowlist, output buffer caps, and trusted script path enforcement (file: packages/aas/src/core/agent-client.ts)
+- [Security] Enforce fail-closed gate hooks, clamp retries from trusted orchestrator state only, add symlink-safe no-clobber plan persistence boundaries, and bound payload/briefing sizes in orchestration path (file: packages/aas/src/orchestrator.ts)
 
 - [Phase 1] AI-Assisted Agent System (AAS) package infrastructure
   - Created new `packages/aas` package with TypeScript interfaces, CLI entry points, and environment config

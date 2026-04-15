@@ -9,8 +9,22 @@ export type {
   AgentMode,
   AgentResult,
   AASConfig,
+  BuildTaskContextOptions,
+  OrchestratorHooks,
+  OrchestratorOptions,
+  PlanPersistenceResult,
   Process,
+  QualityGateDecision,
+  QualityGateHook,
+  QualityGateHookContext,
+  QualityGateHooks,
+  QualityGateResult,
+  QualityGateStage,
+  RetryMetadata,
   Task,
+  TaskContextSnapshot,
+  TaskExecutionState,
+  TaskExecutionStatus,
   TaskQueueEntry,
   ThinkingLevel,
 } from "./types.js";
@@ -30,6 +44,11 @@ export { TaskQueue } from "./task-queue.js";
 
 // Re-export ParallelExecutionEngine from parallel-execution-engine.ts
 export { ParallelExecutionEngine } from "./parallel-execution-engine.js";
+
+// Re-export orchestration core modules
+export { BriefingEngine } from "./briefing-engine.js";
+export { AASOrchestrator, isTerminalStatus } from "./orchestrator.js";
+export { buildTaskContext, canTransition, withTaskStatus } from "./task-context.js";
 
 // Re-export loadAASConfig from types.ts
 export { loadAASConfig } from "./types.js";

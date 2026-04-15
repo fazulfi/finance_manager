@@ -2,6 +2,12 @@
  * Core TypeScript interfaces for the Autonomous Agent System (AAS)
  */
 
+export type TaskExecutionStatus = "pending" | "running" | "completed" | "failed";
+
+export type QualityGateStage = "sanity" | "reviewer" | "tester" | "security";
+
+export type QualityGateDecision = "pass" | "fail" | "skip";
+
 /**
  * Agent Mode - Determines how the agent operates
  */
@@ -60,7 +66,84 @@ export interface Task {
     previousWork: string;
     filesToCreate: string[];
     filesToModify: string[];
+    orchestration?: {
+      retry?: RetryMetadata;
+      status?: TaskExecutionStatus;
+      gateResults?: QualityGateResult[];
+      lastUpdatedAt?: string;
+    };
   };
+}
+
+export interface RetryMetadata {
+  attempt: number;
+  maxAttempts: number;
+  canRetry: boolean;
+  lastError?: string;
+  lastAttemptAt?: string;
+}
+
+export interface QualityGateResult {
+  stage: QualityGateStage;
+  decision: QualityGateDecision;
+  reason?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface QualityGateHookContext {
+  task: Task;
+  stage: QualityGateStage;
+  attempt: number;
+}
+
+export type QualityGateHook = (
+  context: QualityGateHookContext,
+) => Promise<QualityGateResult> | QualityGateResult;
+
+export type QualityGateHooks = Partial<Record<QualityGateStage, QualityGateHook>>;
+
+export interface TaskExecutionState {
+  taskId: string;
+  status: TaskExecutionStatus;
+  retry: RetryMetadata;
+  gateResults: QualityGateResult[];
+  startTime?: Date;
+  endTime?: Date;
+  result?: AgentResult;
+}
+
+export interface PlanPersistenceResult {
+  path: string;
+  bytesWritten: number;
+  persistedAt: string;
+}
+
+export interface OrchestratorHooks {
+  qualityGates?: QualityGateHooks;
+}
+
+export interface OrchestratorOptions {
+  retryCeiling?: number;
+  planFilePath?: string;
+  hooks?: OrchestratorHooks;
+  agentScriptPath?: string;
+}
+
+export interface TaskContextSnapshot {
+  requestSummary: string;
+  currentState: Record<string, unknown>;
+  previousWork: string;
+  filesToCreate: string[];
+  filesToModify: string[];
+  retry: RetryMetadata;
+  gateResults: QualityGateResult[];
+  status: TaskExecutionStatus;
+}
+
+export interface BuildTaskContextOptions {
+  retryCeiling?: number;
+  previous?: TaskContextSnapshot;
+  previousError?: string;
 }
 
 /**
@@ -82,7 +165,7 @@ export interface AgentResult {
 export interface TaskQueueEntry {
   id: string;
   task: Task;
-  status: "pending" | "running" | "completed" | "failed";
+  status: TaskExecutionStatus;
   startTime?: Date;
   endTime?: Date;
   result?: AgentResult;

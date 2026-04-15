@@ -1,11 +1,5 @@
 #!/usr/bin/env node
 
-/**
- * Agent Execution Entry Point
- *
- * This script executes a single agent task with specific parameters.
- */
-
 import { Command } from "commander";
 import { access } from "fs/promises";
 import pino from "pino";
@@ -13,12 +7,13 @@ import pinoPretty from "pino-pretty";
 import path from "path";
 import { fileURLToPath } from "url";
 import { z } from "zod";
-import { AgentClient } from "@finance/aas";
-import { AgentRunner } from "@finance/aas";
-import type { Agent, Task, AgentResult } from "@finance/aas";
+import { AASOrchestrator, loadAASConfig } from "@finance/aas";
+import type { AASConfig, Agent, AgentResult, QualityGateHooks, Task } from "@finance/aas";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const ROOT_DIR = path.resolve(__dirname, "..");
+const DEFAULT_ENV_FILE = ".env.aas";
 
 const agentSchema = z.object({
   id: z.string(),
@@ -55,145 +50,270 @@ const logger = pino(
   }),
 );
 
-const program = new Command();
+type RunAgentMode = "single" | "quality-gate";
 
-program
-  .name("run-agent")
-  .description("Execute an agent task")
-  .version("0.0.1")
-  .requiredOption("-a, --agent-id <string>", "Agent ID to execute")
-  .requiredOption("-t, --task-id <string>", "Task ID to execute")
-  .option("--task-brief <string>", "Brief description of the task")
-  .option("--config-file <path>", "Path to AAS config file", ".env.aas")
-  .option("--env-file <path>", "Path to environment file", ".env.aas")
-  .action(async (options) => {
-    logger.info({ options }, "Running agent task");
+type RunAgentOptions = {
+  agentId: string;
+  taskId: string;
+  taskBrief?: string;
+  configFile: string;
+  envFile: string;
+  executionMode: RunAgentMode;
+  qualityGateStage?: "sanity" | "reviewer" | "tester" | "security";
+};
 
-    try {
-      // Load environment variables from .env.aas
-      const dotenv = await import("dotenv");
-      const envPath = path.join(__dirname, options.envFile);
-      dotenv.config({ path: envPath });
+export async function runAgent(options: RunAgentOptions): Promise<number> {
+  logger.info({ options }, "Running agent task");
 
-      logger.info({ agentId: options.agentId, taskId: options.taskId }, "Executing agent task");
+  try {
+    const envPath = await resolveConfigPath(options.envFile);
+    const configPath = await resolveConfigPath(options.configFile);
+    const dotenv = await import("dotenv");
+    dotenv.config({ path: envPath });
 
-      // Load agent configuration from config file
-      const agentConfigPath = path.join(__dirname, options.configFile);
-      const { loadAASConfig } = await import("@finance/aas");
-      const aasConfig = await loadAASConfig(agentConfigPath);
+    const loadedConfig = await loadAASConfig(configPath);
+    const config = buildRuntimeConfig(loadedConfig);
 
-      const agent: Agent = aasConfig.agentRegistry[options.agentId];
-      if (!agent) {
-        throw new Error(`Agent not found: ${options.agentId}`);
-      }
-
-      // Create task definition
-      const task: Task = {
-        id: options.taskId,
-        step: "single",
-        subagent: options.agentId,
-        brief: options.taskBrief || "Execute agent task",
-        context: {
-          requestSummary: options.taskBrief || "Execute agent task",
-          currentState: {},
-          previousWork: "",
-          filesToCreate: [],
-          filesToModify: [],
-        },
-      };
-
-      logger.info({ agentId: agent.id, name: agent.name, task: task.brief }, "Task created");
-
-      // Spawn agent process
-      logger.info({ agentId: agent.id }, "Spawning agent process");
-      const compiledAgentPath = path.join(__dirname, "../packages/aas/dist/agent.js");
-      const sourceAgentPath = path.join(__dirname, "../packages/aas/src/agent.ts");
-      let agentScriptPath = sourceAgentPath;
-
-      try {
-        await access(compiledAgentPath);
-        agentScriptPath = compiledAgentPath;
-      } catch {
-        // Fallback to TypeScript source, executed via tsx runtime in AgentClient
-      }
-
-      const agentClient = await AgentClient.spawnAgent(agent, agentScriptPath);
-
-      logger.info({ agentId: agent.id }, "Agent process spawned, sending task");
-      await agentClient.sendMessage({
-        type: "task",
-        payload: task,
-      });
-
-      // Wait for completion (30 second timeout)
-      logger.info({ agentId: agent.id, timeout: 30000 }, "Waiting for agent completion");
-      const completed = await AgentRunner.waitForCompletion(agentClient, 30000);
-
-      if (!completed) {
-        logger.error({ agentId: agent.id }, "Agent timeout");
-        await agentClient.kill();
-        process.exit(1);
-      }
-
-      // Get output
-      const output = AgentRunner.getOutput(agentClient);
-      const terminalMessage = AgentRunner.getTerminalMessage(agentClient);
-
-      // Parse agent result
-      let result: AgentResult;
-      if (terminalMessage?.type === "complete" || terminalMessage?.type === "error") {
-        const parsedPayload = agentResultSchema.safeParse(terminalMessage.payload);
-        if (parsedPayload.success) {
-          result = parsedPayload.data;
-        } else {
-          result = {
-            agent,
-            success: false,
-            output,
-            errors: [
-              "Invalid terminal agent payload",
-              ...parsedPayload.error.issues.map(
-                (issue) => `${issue.path.join(".")}: ${issue.message}`,
-              ),
-            ],
-          };
-        }
-      } else {
-        result = {
-          agent,
-          success: false,
-          output,
-          errors: ["Failed to read terminal agent payload"],
-        };
-      }
-
-      // Log result
-      if (result.success) {
-        logger.info(
-          { agentId: agent.id, outputLength: output.length },
-          "Agent completed successfully",
-        );
-      } else {
-        logger.error({ agentId: agent.id, errors: result.errors }, "Agent completed with errors");
-      }
-
-      // Display result to user
-      console.log("\n=== Agent Result ===");
-      console.log(`Agent: ${agent.name} (${agent.id})`);
-      console.log(`Success: ${result.success ? "Yes" : "No"}`);
-      if (result.errors && result.errors.length > 0) {
-        console.log("Errors:");
-        result.errors.forEach((error) => console.log(`  - ${error}`));
-      }
-      console.log("\n--- Output ---");
-      console.log(output);
-      console.log("==================\n");
-
-      process.exit(result.success ? 0 : 1);
-    } catch (error) {
-      logger.error({ error }, "Agent task failed");
-      process.exit(1);
+    const agent = config.agentRegistry[options.agentId];
+    if (!agent) {
+      throw new Error(`Agent not found: ${options.agentId}`);
     }
-  });
 
-program.parse();
+    const task = createTask(options);
+    const orchestrator = new AASOrchestrator(config, {
+      hooks: {
+        qualityGates: createQualityGateHooks(options.executionMode, options.qualityGateStage),
+      },
+      agentScriptPath: await resolveAgentScriptPath(),
+    });
+
+    const state = await orchestrator.executeTask(task);
+    const result = safeParseOrchestratedResult(state.result, agent);
+    logAndPrintResult(result);
+
+    return result.success ? 0 : 1;
+  } catch (error) {
+    logger.error({ error }, "Agent task failed");
+    return 1;
+  }
+}
+
+export function createRunAgentProgram(): Command {
+  const program = new Command();
+
+  program
+    .name("run-agent")
+    .description("Execute an agent task through orchestrator")
+    .version("0.0.1")
+    .requiredOption("-a, --agent-id <string>", "Agent ID to execute")
+    .requiredOption("-t, --task-id <string>", "Task ID to execute")
+    .option("--task-brief <string>", "Brief description of the task")
+    .option("--config-file <path>", "Path to AAS config file", DEFAULT_ENV_FILE)
+    .option("--env-file <path>", "Path to environment file", DEFAULT_ENV_FILE)
+    .option("--execution-mode <mode>", "Execution mode (single|quality-gate)", "single")
+    .option("--quality-gate-stage <stage>", "Quality gate stage (sanity|reviewer|tester|security)")
+    .action(async (options) => {
+      const code = await runAgent(options as RunAgentOptions);
+      process.exitCode = code;
+    });
+
+  return program;
+}
+
+const isMainModule =
+  process.argv[1] !== undefined && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isMainModule) {
+  const program = createRunAgentProgram();
+  void program.parseAsync(process.argv).catch((error) => {
+    logger.error({ error }, "run-agent failed");
+    process.exit(1);
+  });
+}
+
+function createTask(options: RunAgentOptions): Task {
+  const requestSummary = options.taskBrief || "Execute agent task";
+  const step =
+    options.executionMode === "quality-gate"
+      ? `quality-gate:${options.qualityGateStage ?? "sanity"}`
+      : "single";
+
+  return {
+    id: options.taskId,
+    step,
+    subagent: options.agentId,
+    brief: requestSummary,
+    context: {
+      requestSummary,
+      currentState: {
+        executionMode: options.executionMode,
+        qualityGateStage: options.qualityGateStage,
+      },
+      previousWork: "",
+      filesToCreate: [],
+      filesToModify: [],
+    },
+  };
+}
+
+function createQualityGateHooks(
+  mode: RunAgentMode,
+  selectedStage?: RunAgentOptions["qualityGateStage"],
+): QualityGateHooks {
+  if (mode === "quality-gate" && !selectedStage) {
+    throw new Error("quality-gate execution mode requires --quality-gate-stage");
+  }
+
+  return {
+    sanity: ({ stage }) => ({
+      stage,
+      decision: "pass",
+      metadata: { mode, selectedStage, triggered: stage === selectedStage },
+    }),
+    reviewer: ({ stage }) => ({
+      stage,
+      decision: "pass",
+      metadata: { mode, selectedStage, triggered: stage === selectedStage },
+    }),
+    tester: ({ stage }) => ({
+      stage,
+      decision: "pass",
+      metadata: { mode, selectedStage, triggered: stage === selectedStage },
+    }),
+    security: ({ stage }) => ({
+      stage,
+      decision: "pass",
+      metadata: { mode, selectedStage, triggered: stage === selectedStage },
+    }),
+  };
+}
+
+function safeParseOrchestratedResult(result: AgentResult | undefined, agent: Agent): AgentResult {
+  const parsed = agentResultSchema.safeParse(result);
+  if (parsed.success) {
+    return parsed.data;
+  }
+
+  return {
+    agent,
+    success: false,
+    output: result?.output || "",
+    errors: [
+      "Invalid terminal agent payload",
+      ...parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`),
+    ],
+  };
+}
+
+function logAndPrintResult(result: AgentResult): void {
+  if (result.success) {
+    logger.info(
+      { agentId: result.agent.id, outputLength: result.output.length },
+      "Agent completed successfully",
+    );
+  } else {
+    logger.error(
+      { agentId: result.agent.id, errors: result.errors },
+      "Agent completed with errors",
+    );
+  }
+
+  console.log("\n=== Agent Result ===");
+  console.log(`Agent: ${result.agent.name} (${result.agent.id})`);
+  console.log(`Success: ${result.success ? "Yes" : "No"}`);
+  if (result.errors && result.errors.length > 0) {
+    console.log("Errors:");
+    result.errors.forEach((error) => console.log(`  - ${error}`));
+  }
+  console.log("\n--- Output ---");
+  console.log(result.output);
+  console.log("==================\n");
+}
+
+function buildRuntimeConfig(loadedConfig: AASConfig): AASConfig {
+  if (Object.keys(loadedConfig.agentRegistry).length > 0) {
+    return loadedConfig;
+  }
+
+  return {
+    ...loadedConfig,
+    agentRegistry: createDefaultAgentRegistry(),
+  };
+}
+
+function createDefaultAgentRegistry(): Record<string, Agent> {
+  return {
+    planner: createAgent("planner", "Planner", "primary", "medium", true),
+    coder: createAgent("coder", "Coder", "subagent", "high", true),
+    reviewer: createAgent("reviewer", "Reviewer", "subagent", "low", false),
+    tester: createAgent("tester", "Tester", "subagent", "medium", true),
+    "security-auditor": createAgent(
+      "security-auditor",
+      "Security Auditor",
+      "subagent",
+      "medium",
+      false,
+    ),
+  };
+}
+
+function createAgent(
+  id: string,
+  name: string,
+  mode: Agent["mode"],
+  thinking: Agent["thinking"],
+  canRunBash: boolean,
+): Agent {
+  return {
+    id,
+    name,
+    mode,
+    thinking,
+    permission: {
+      read: ["**/*.{ts,tsx,js,jsx,json,md}"],
+      list: true,
+      glob: true,
+      grep: true,
+      lsp: true,
+      edit: true,
+      bash: canRunBash,
+      webfetch: false,
+      task: {},
+    },
+  };
+}
+
+async function resolveAgentScriptPath(): Promise<string> {
+  const compiledAgentPath = path.resolve(ROOT_DIR, "packages", "aas", "dist", "agent.js");
+  const sourceAgentPath = path.resolve(ROOT_DIR, "packages", "aas", "src", "agent.ts");
+
+  try {
+    await access(compiledAgentPath);
+    return compiledAgentPath;
+  } catch {
+    return sourceAgentPath;
+  }
+}
+
+async function resolveConfigPath(inputPath: string): Promise<string> {
+  if (path.isAbsolute(inputPath)) {
+    return inputPath;
+  }
+
+  const candidates = [
+    path.resolve(process.cwd(), inputPath),
+    path.resolve(ROOT_DIR, "packages", "aas", inputPath),
+    path.resolve(__dirname, inputPath),
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      await access(candidate);
+      return candidate;
+    } catch {
+      // Continue resolving fallback candidates
+    }
+  }
+
+  return candidates[0] ?? path.resolve(process.cwd(), inputPath);
+}

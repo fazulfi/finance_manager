@@ -10,13 +10,15 @@ const logger = pino({ name: "ParallelExecutionEngine" });
  * Default maximum concurrency from environment
  */
 const DEFAULT_MAX_CONCURRENT = 5;
+const MIN_CONCURRENCY = 1;
+const MAX_CONCURRENCY = 10;
 
 /**
  * Get max concurrency from environment variable
  * @returns Maximum number of concurrent tasks
  */
 function getMaxConcurrency(): number {
-  const envValue = process.env.AAS_MAX_CONCURRENT;
+  const envValue = process.env.AAS_MAX_CONCURRENT_AGENTS ?? process.env.AAS_MAX_CONCURRENT;
   if (envValue) {
     const parsed = parseInt(envValue, 10);
     if (!isNaN(parsed) && parsed > 0) {
@@ -57,11 +59,7 @@ export class ParallelExecutionEngine {
    * @returns Promise resolving to array of AgentResult in original order
    */
   async executeParallel(tasks: Task[], concurrencyLimit: number): Promise<AgentResult[]> {
-    // Validate concurrencyLimit
-    if (!Number.isInteger(concurrencyLimit) || concurrencyLimit < 1 || concurrencyLimit > 10) {
-      logger.warn({ concurrencyLimit }, "Invalid concurrencyLimit, using default");
-      concurrencyLimit = Math.min(Math.max(concurrencyLimit, 1), 10);
-    }
+    concurrencyLimit = normalizeConcurrencyLimit(concurrencyLimit, this._maxConcurrent);
 
     if (tasks.length === 0) {
       logger.info("No tasks to execute");
@@ -87,7 +85,9 @@ export class ParallelExecutionEngine {
     }
 
     // Wait for all remaining tasks to complete
-    await queue.awaitAll();
+    if (queue.queueLength > 0 || queue.runningCount > 0) {
+      await queue.awaitAll();
+    }
 
     logger.info(
       { completed: queue.completedCount, total: tasks.length },
@@ -116,11 +116,7 @@ export class ParallelExecutionEngine {
     concurrencyLimit: number,
     callback: (progress: number, total: number) => void,
   ): Promise<AgentResult[]> {
-    // Validate concurrencyLimit
-    if (!Number.isInteger(concurrencyLimit) || concurrencyLimit < 1 || concurrencyLimit > 10) {
-      logger.warn({ concurrencyLimit }, "Invalid concurrencyLimit, using default");
-      concurrencyLimit = Math.min(Math.max(concurrencyLimit, 1), 10);
-    }
+    concurrencyLimit = normalizeConcurrencyLimit(concurrencyLimit, this._maxConcurrent);
 
     if (tasks.length === 0) {
       logger.info("No tasks to execute");
@@ -150,7 +146,9 @@ export class ParallelExecutionEngine {
     }
 
     // Wait for all remaining tasks to complete
-    await queue.awaitAll();
+    if (queue.queueLength > 0 || queue.runningCount > 0) {
+      await queue.awaitAll();
+    }
 
     // Final progress update
     callback(queue.completedCount, tasks.length);
@@ -298,4 +296,14 @@ export class ParallelExecutionEngine {
       maxConcurrent: this._maxConcurrent,
     };
   }
+}
+
+function normalizeConcurrencyLimit(input: number, fallback: number): number {
+  const candidate = Number.isFinite(input) ? Math.trunc(input) : fallback;
+
+  if (candidate < MIN_CONCURRENCY || candidate > MAX_CONCURRENCY) {
+    logger.warn({ concurrencyLimit: input }, "Invalid concurrencyLimit, using safe default");
+  }
+
+  return Math.min(Math.max(candidate, MIN_CONCURRENCY), MAX_CONCURRENCY);
 }
