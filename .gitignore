@@ -12,6 +12,12 @@ dist/
 .expo-shared/
 web-build/
 
+# AAS runtime artifacts
+.aas/
+**/.tmp-orchestrator-runs/
+packages/aas/packages/
+nul
+
 # TypeScript
 *.tsbuildinfo
 

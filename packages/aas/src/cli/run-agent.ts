@@ -1,18 +1,20 @@
 #!/usr/bin/env node
 
-import { Command } from "commander";
 import { access } from "fs/promises";
-import pino from "pino";
-import pinoPretty from "pino-pretty";
 import path from "path";
 import { fileURLToPath } from "url";
+
+import { Command } from "commander";
+import pino from "pino";
+import pinoPretty from "pino-pretty";
 import { z } from "zod";
-import { AASOrchestrator, loadAASConfig } from "@finance/aas";
-import type { AASConfig, Agent, AgentResult, QualityGateHooks, Task } from "@finance/aas";
+
+import { AASOrchestrator, loadAASConfig } from "../index.js";
+import type { AASConfig, Agent, AgentResult, QualityGateHooks, Task } from "../index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ROOT_DIR = path.resolve(__dirname, "..");
+const ROOT_DIR = path.resolve(__dirname, "..", "..", "..", "..");
 const DEFAULT_ENV_FILE = ".env.aas";
 
 const agentSchema = z.object({
@@ -41,7 +43,6 @@ const agentResultSchema: z.ZodType<AgentResult> = z.object({
   metadata: z.record(z.unknown()).optional(),
 });
 
-// Create logger
 const logger = pino(
   pinoPretty({
     translateTime: "SYS:standard",
@@ -105,12 +106,13 @@ export async function runAgent(options: RunAgentOptions): Promise<number> {
 
     const state = await orchestrator.executeTask(task, {
       signal: controller.signal,
-      timeoutMs,
+      ...(timeoutMs ? { timeoutMs } : {}),
     });
 
     if (cancelTimer) {
       clearTimeout(cancelTimer);
     }
+
     const result = safeParseOrchestratedResult(state.result, agent);
     logAndPrintResult(result);
 
@@ -247,16 +249,20 @@ function logAndPrintResult(result: AgentResult): void {
     );
   }
 
-  console.log("\n=== Agent Result ===");
-  console.log(`Agent: ${result.agent.name} (${result.agent.id})`);
-  console.log(`Success: ${result.success ? "Yes" : "No"}`);
+  writeLine("\n=== Agent Result ===");
+  writeLine(`Agent: ${result.agent.name} (${result.agent.id})`);
+  writeLine(`Success: ${result.success ? "Yes" : "No"}`);
   if (result.errors && result.errors.length > 0) {
-    console.log("Errors:");
-    result.errors.forEach((error) => console.log(`  - ${error}`));
+    writeLine("Errors:");
+    result.errors.forEach((error) => writeLine(`  - ${error}`));
   }
-  console.log("\n--- Output ---");
-  console.log(result.output);
-  console.log("==================\n");
+  writeLine("\n--- Output ---");
+  writeLine(result.output);
+  writeLine("==================\n");
+}
+
+function writeLine(message: string): void {
+  process.stdout.write(`${message}\n`);
 }
 
 function buildRuntimeConfig(loadedConfig: AASConfig): AASConfig {
@@ -340,7 +346,7 @@ async function resolveConfigPath(inputPath: string): Promise<string> {
       await access(candidate);
       return candidate;
     } catch {
-      // Continue resolving fallback candidates
+      // continue
     }
   }
 

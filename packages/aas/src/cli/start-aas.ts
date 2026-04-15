@@ -1,23 +1,24 @@
 #!/usr/bin/env node
 
-import { Command } from "commander";
 import { access } from "fs/promises";
-import pino from "pino";
-import pinoPretty from "pino-pretty";
 import path from "path";
 import { fileURLToPath } from "url";
-import { AASOrchestrator, loadAASConfig } from "@finance/aas";
-import type { AASConfig, Agent, QualityGateHooks, Task } from "@finance/aas";
+
+import { Command } from "commander";
+import pino from "pino";
+import pinoPretty from "pino-pretty";
+
+import { AASOrchestrator, loadAASConfig } from "../index.js";
+import type { AASConfig, Agent, QualityGateHooks, Task } from "../index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ROOT_DIR = path.resolve(__dirname, "..");
+const ROOT_DIR = path.resolve(__dirname, "..", "..", "..", "..");
 const DEFAULT_ENV_FILE = ".env.aas";
 const DEFAULT_PLAN_FILE = path.join(".opencode", "plans", "current-plan.md");
 const LOG_LEVELS = ["trace", "debug", "info", "warn", "error", "fatal"] as const;
 type LogLevel = (typeof LOG_LEVELS)[number];
 
-// Create logger
 const logger = pino(
   pinoPretty({
     translateTime: "SYS:standard",
@@ -81,13 +82,13 @@ export async function runStartAAS(options: StartAASOptions): Promise<number> {
 
     const runControl = normalizeRunControl(options);
     const states = await orchestrator.executeRun([task], {
-      concurrency: runControl.concurrency,
-      runId: runControl.runId,
-      runDir: runControl.runDir,
+      ...(runControl.concurrency ? { concurrency: runControl.concurrency } : {}),
+      ...(runControl.runId ? { runId: runControl.runId } : {}),
+      ...(runControl.runDir ? { runDir: runControl.runDir } : {}),
       resume: runControl.resume,
-      resumeFromPath: runControl.resumeFromPath,
-      runTimeoutMs: runControl.runTimeoutMs,
-      defaultTaskTimeoutMs: runControl.taskTimeoutMs,
+      ...(runControl.resumeFromPath ? { resumeFromPath: runControl.resumeFromPath } : {}),
+      ...(runControl.runTimeoutMs ? { runTimeoutMs: runControl.runTimeoutMs } : {}),
+      ...(runControl.taskTimeoutMs ? { defaultTaskTimeoutMs: runControl.taskTimeoutMs } : {}),
     });
 
     const state = states.find((s) => s.taskId === task.id);
@@ -182,7 +183,6 @@ function normalizeLogLevel(value: string): LogLevel {
   if (LOG_LEVELS.includes(level)) {
     return level;
   }
-
   return "info";
 }
 
@@ -276,7 +276,7 @@ async function resolveEnvFilePath(inputPath: string): Promise<string> {
       await access(candidate);
       return candidate;
     } catch {
-      // Continue resolving fallback candidates
+      // continue
     }
   }
 
@@ -305,15 +305,19 @@ function normalizeRunControl(options: StartAASOptions): {
       ? Math.max(1, Math.trunc(options.taskTimeoutMs))
       : undefined;
 
+  const base = {
+    ...(typeof concurrency === "number" ? { concurrency } : {}),
+    ...(typeof runTimeoutMs === "number" ? { runTimeoutMs } : {}),
+    ...(typeof taskTimeoutMs === "number" ? { taskTimeoutMs } : {}),
+  };
+
   const resumeArg = typeof options.resume === "string" ? options.resume.trim() : "";
   if (!resumeArg) {
     return {
-      concurrency,
-      runId: options.runId,
-      runDir: options.runDir,
+      ...base,
+      ...(options.runId ? { runId: options.runId } : {}),
+      ...(options.runDir ? { runDir: options.runDir } : {}),
       resume: false,
-      runTimeoutMs,
-      taskTimeoutMs,
     };
   }
 
@@ -333,22 +337,18 @@ function normalizeRunControl(options: StartAASOptions): {
     }
 
     return {
-      concurrency,
+      ...base,
       runId,
       runDir,
       resume: true,
       resumeFromPath: resumePath,
-      runTimeoutMs,
-      taskTimeoutMs,
     };
   }
 
   return {
-    concurrency,
+    ...base,
     runId: options.runId ?? resumeArg,
-    runDir: options.runDir,
+    ...(options.runDir ? { runDir: options.runDir } : {}),
     resume: true,
-    runTimeoutMs,
-    taskTimeoutMs,
   };
 }

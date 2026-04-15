@@ -87,6 +87,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- [AAS] Add DAG scheduler with cycle detection + ready-set selection (file: packages/aas/src/dag-scheduler.ts)
+- [AAS] Add run checkpoint store with repo-boundary enforcement and capped payload sanitization (file: packages/aas/src/run-store.ts)
+- [AAS] Add cancellation + timeout utilities used by orchestrator run execution (file: packages/aas/src/cancellation.ts)
 - [AAS] Implement core communication components for agent execution, parsing, queueing, and parallel orchestration (`agent-client`, `agent-runner`, `agent-result-parser`, `task-queue`, `parallel-execution-engine`) (file: packages/aas/src/core/agent-client.ts)
 - [AAS] Add AAS-focused test coverage with 6 test files and 16 passing tests across core communication flows (file: packages/aas/src/**tests**/agent-client.test.ts)
 - [AAS] Add package build script for `@finance/aas` to standardize build pipeline checks (file: packages/aas/package.json)
@@ -100,11 +103,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Verification] Confirm `@finance/aas` build, type-check, lint, and test pass; document full monorepo `pnpm build` failure as Windows EPERM symlink in `@finance/web` (informational, out-of-scope) (file: .opencode/CURRENT_CONTEXT.md)
 - [AAS] Wire orchestrator flow into CLI entrypoints and package exports/types (`start-aas`, `run-agent`, extensionless wrappers, `types.ts`, `index.ts`) (file: bin/start-aas.ts)
 - [Verification] Record Phase 3 verification for `@finance/aas`: type-check PASS, lint PASS (minor non-blocking react detect warning), test PASS (9 files, 24 tests), build PASS, and CLI help PASS for both commands (file: .opencode/CURRENT_CONTEXT.md)
+- [AAS] Replace FIFO TaskQueue with priority + aging scheduling (no simulated execution) (file: packages/aas/src/task-queue.ts)
+- [AAS] Replace simulated parallel engine with injected executor and fail-fast behavior (file: packages/aas/src/parallel-execution-engine.ts)
+- [AAS] Implement `executeRun` orchestration: DAG scheduling, parallel dispatch, checkpoint/resume, and cancel/timeout propagation (file: packages/aas/src/orchestrator.ts)
+- [AAS] CLI: fail-closed gate hooks by default; add explicit bypass via `--unsafe-gates` / `AAS_UNSAFE_GATES=1` (file: bin/start-aas.ts)
+- [AAS] CLI: add run controls (`--concurrency`, `--run-id`, `--run-dir`, `--resume`, `--run-timeout-ms`, `--task-timeout-ms`) (file: bin/start-aas.ts)
+- [AAS] CLI: add agent runner timeout/cancel test utilities (`--timeout-ms`, `--cancel-after-ms`) (file: bin/run-agent.ts)
+- [AAS] Add `AAS_RUN_DIR` env var for checkpoint base directory defaults (file: packages/aas/.env.aas)
 
 ### Security
 
 - [Security] Harden AAS agent client execution with environment allowlist, output buffer caps, and trusted script path enforcement (file: packages/aas/src/core/agent-client.ts)
 - [Security] Enforce fail-closed gate hooks, clamp retries from trusted orchestrator state only, add symlink-safe no-clobber plan persistence boundaries, and bound payload/briefing sizes in orchestration path (file: packages/aas/src/orchestrator.ts)
+- [Security] Enforce repo-root + run-dir boundary checks for checkpoint persistence, including symlink-safe realpath validation and size caps (file: packages/aas/src/run-store.ts)
 
 - [Phase 1] AI-Assisted Agent System (AAS) package infrastructure
   - Created new `packages/aas` package with TypeScript interfaces, CLI entry points, and environment config

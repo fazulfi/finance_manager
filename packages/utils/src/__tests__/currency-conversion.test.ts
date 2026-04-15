@@ -43,21 +43,26 @@ describe("currency-conversion", () => {
     });
 
     it("skips non-positive and non-finite rates", () => {
+      const sampleRate0 = sampleRates[0]!; // Non-null assertion is safe here since sampleRates is initialized
       const badRates = [
         ...sampleRates,
         {
-          ...sampleRates[0],
+          ...sampleRate0,
           id: "bad-1",
           rate: 0,
           base: CurrencyCode.SGD,
           target: CurrencyCode.USD,
+          snapshotDate: sampleRate0.snapshotDate,
+          source: "mock",
         },
         {
-          ...sampleRates[0],
+          ...sampleRate0,
           id: "bad-2",
           rate: Number.NaN,
           base: CurrencyCode.JPY,
           target: CurrencyCode.USD,
+          snapshotDate: sampleRate0.snapshotDate,
+          source: "mock",
         },
       ];
 

@@ -7,6 +7,16 @@ import { router, protectedProcedure, objectId } from "../trpc.js";
 const TransactionTypeEnum = z.enum(["INCOME", "EXPENSE", "TRANSFER"]);
 const CurrencyEnum = z.enum(["IDR", "USD", "EUR", "SGD", "JPY"]);
 
+// Event emission utilities
+function emitTransactionEvent(eventType: "created" | "updated" | "deleted") {
+  // In production, this would broadcast events to connected clients via SSE
+  // For now, we'll implement a simple console log as a placeholder
+  console.log(`[EVENT] Transaction ${eventType} event emitted`);
+
+  // TODO: Integrate with eventsRouter to broadcast to connected clients
+  // This would require modifying the create/update/delete procedures to call this function
+}
+
 export const transactionRouter = router({
   list: protectedProcedure
     .input(
@@ -193,7 +203,9 @@ export const transactionRouter = router({
         recurringRule: input.recurringRule ?? null,
       } as Parameters<typeof ctx.db.transaction.create>[0]["data"];
 
-      return ctx.db.transaction.create({ data });
+      const transaction = await ctx.db.transaction.create({ data });
+      emitTransactionEvent("created");
+      return transaction;
     }),
 
   update: protectedProcedure
@@ -307,10 +319,12 @@ export const transactionRouter = router({
       // Include accountId to ensure transaction remains linked to source account
       data.accountId = existing.accountId;
 
-      return ctx.db.transaction.update({
+      const updated = await ctx.db.transaction.update({
         where: { id: input.id, userId: ctx.session.user.id },
         data,
       });
+      emitTransactionEvent("updated");
+      return updated;
     }),
 
   delete: protectedProcedure.input(z.object({ id: objectId })).mutation(async ({ ctx, input }) => {
@@ -328,6 +342,7 @@ export const transactionRouter = router({
       where: { id: input.id, userId: ctx.session.user.id },
       data: { isRecurring: false },
     });
+    emitTransactionEvent("deleted");
     return { success: true };
   }),
 

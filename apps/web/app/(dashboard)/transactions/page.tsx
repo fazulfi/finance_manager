@@ -11,6 +11,7 @@ import { QuickAddButton } from "@/components/transactions/QuickAddButton";
 import { QuickAddSheet } from "@/components/transactions/QuickAddSheet";
 import { TransactionsFiltersWrapper } from "@/components/transactions/TransactionFiltersWrapper";
 import { TransactionListClient } from "@/components/transactions/TransactionList";
+import { ExportButton } from "@/components/common/ExportButton";
 
 async function getTransactions(page: number = 1, limit: number = 20) {
   const session = await auth();
@@ -78,15 +79,27 @@ export default async function TransactionsPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight text-gray-900">Transactions</h1>
-        {typeof window !== "undefined" ? (
-          <Link href="/transactions/new">
-            <QuickAddButton onClick={() => {}} />
-          </Link>
-        ) : (
-          <Link href="/transactions/new" className={buttonVariants()}>
-            Add transaction
-          </Link>
-        )}
+        <div className="flex items-center gap-3">
+          <ExportButton
+            type="transactions"
+            filters={{
+              dateFrom: dateFrom?.toISOString(),
+              dateTo: dateTo?.toISOString(),
+              accountId,
+              category,
+              search,
+            }}
+          />
+          {typeof window !== "undefined" ? (
+            <Link href="/transactions/new">
+              <QuickAddButton onClick={() => {}} />
+            </Link>
+          ) : (
+            <Link href="/transactions/new" className={buttonVariants()}>
+              Add transaction
+            </Link>
+          )}
+        </div>
       </div>
 
       <TransactionsFiltersWrapper

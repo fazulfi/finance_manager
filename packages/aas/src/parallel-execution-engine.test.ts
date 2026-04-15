@@ -1,15 +1,39 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { ParallelExecutionEngine } from "./parallel-execution-engine.js";
-import type { AgentResult, Task } from "./types.js";
+import { TaskQueue } from "./task-queue.js";
+import type { Task, TaskExecutionState } from "./types.js";
 
-const { FakeTaskQueue } = vi.hoisted(() => {
-  class MockQueue {
-    private _completed: Array<{ id: string; result: AgentResult }> = [];
+const createTask = (id: string): Task => ({
+  id,
+  step: `step-${id}`,
+  subagent: "coder",
+  brief: "brief",
+  context: {
+    requestSummary: "summary",
+    currentState: {},
+    previousWork: "",
+    filesToCreate: [],
+    filesToModify: [],
+  },
+});
 
-    enqueue(task: Task): void {
-      this._completed.push({
-        id: task.id,
+describe("ParallelExecutionEngine", () => {
+  it("executes tasks using injected executor until queue is closed", async () => {
+    const engine = new ParallelExecutionEngine();
+    const queue = new TaskQueue({ now: () => 0 });
+    queue.enqueue(createTask("t1"));
+    queue.enqueue(createTask("t2"));
+    queue.close();
+
+    const executor = vi.fn(async (task: Task): Promise<TaskExecutionState> => {
+      return {
+        taskId: task.id,
+        status: "completed",
+        retry: { attempt: 1, maxAttempts: 1, canRetry: false },
+        gateResults: [],
+        startTime: new Date(0),
+        endTime: new Date(0),
         result: {
           agent: {
             id: task.subagent,
@@ -29,83 +53,42 @@ const { FakeTaskQueue } = vi.hoisted(() => {
             },
           },
           success: true,
-          output: `Task ${task.id} completed`,
-        } satisfies AgentResult,
-      });
-    }
+          output: "ok",
+        },
+      };
+    });
 
-    dequeue(): Task | null {
-      return null;
-    }
+    const states = await engine.executeFromQueue({
+      runId: "run-1",
+      queue,
+      concurrency: 2,
+      executor,
+    });
 
-    complete(): void {
-      // no-op for test double
-    }
-
-    get completed() {
-      return this._completed;
-    }
-
-    get completedCount(): number {
-      return this._completed.length;
-    }
-
-    get runningCount(): number {
-      return 0;
-    }
-
-    get running() {
-      return [] as Array<{ id: string }>;
-    }
-
-    async awaitAll(): Promise<void> {
-      return;
-    }
-  }
-
-  return { FakeTaskQueue: MockQueue };
-});
-
-vi.mock("./task-queue.js", () => ({
-  TaskQueue: FakeTaskQueue,
-}));
-
-const createTask = (id: string): Task => ({
-  id,
-  step: `step-${id}`,
-  subagent: `agent-${id}`,
-  brief: "brief",
-  context: {
-    requestSummary: "summary",
-    currentState: {},
-    previousWork: "",
-    filesToCreate: [],
-    filesToModify: [],
-  },
-});
-
-describe("ParallelExecutionEngine", () => {
-  it("returns results mapped in original task order", async () => {
-    const engine = new ParallelExecutionEngine();
-    const tasks = [createTask("1"), createTask("2"), createTask("3")];
-
-    const results = await engine.executeParallel(tasks, 2);
-
-    expect(results).toHaveLength(3);
-    expect(results[0]?.output).toContain("1");
-    expect(results[1]?.output).toContain("2");
-    expect(results[2]?.output).toContain("3");
+    expect(executor).toHaveBeenCalledTimes(2);
+    expect(states).toHaveLength(2);
+    expect(states.map((s) => s.taskId).sort()).toEqual(["t1", "t2"]);
   });
 
-  it("calls callback for empty input and validates maxConcurrent setter", async () => {
+  it("propagates executor errors and closes queue", async () => {
     const engine = new ParallelExecutionEngine();
-    const callback = vi.fn();
+    const queue = new TaskQueue({ now: () => 0 });
+    queue.enqueue(createTask("t1"));
 
-    const results = await engine.executeParallelWithCallback([], 0, callback);
-    engine.maxConcurrent = 4;
+    const executor = vi.fn(async () => {
+      throw new Error("boom");
+    });
 
-    expect(results).toEqual([]);
-    expect(callback).toHaveBeenCalledWith(0, 0);
-    expect(engine.getStats()).toEqual({ maxConcurrent: 4 });
+    await expect(
+      engine.executeFromQueue({
+        runId: "run-err",
+        queue,
+        concurrency: 1,
+        executor,
+      }),
+    ).rejects.toThrow(/boom/i);
+
+    expect(executor).toHaveBeenCalledTimes(1);
+    expect(queue.isClosed).toBe(true);
   });
 });

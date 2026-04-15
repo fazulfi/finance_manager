@@ -4,6 +4,7 @@ import { budgetRouter } from "./routers/budget.js";
 import { categoryRouter } from "./routers/category.js";
 import { dashboardRouter } from "./routers/dashboard.js";
 import { debtRouter } from "./routers/debt.js";
+import { exportRouter } from "./routers/export.js";
 import { exchangeRateRouter } from "./routers/exchange-rate.js";
 import { goalRouter } from "./routers/goal.js";
 import { investmentRouter } from "./routers/investment.js";
@@ -29,6 +30,7 @@ export const appRouter = router({
   exchangeRate: exchangeRateRouter,
   dashboard: dashboardRouter,
   report: reportRouter,
+  export: exportRouter,
 });
 
 export type AppRouter = typeof appRouter;

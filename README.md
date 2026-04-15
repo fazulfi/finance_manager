@@ -9,7 +9,7 @@ Personal finance monorepo with shared web, mobile, API, and database packages.
 - Prisma + MongoDB data layer in `packages/db`
 - Shared tRPC package in `packages/api` with server-safe root exports
 - Client-only React helpers isolated behind `@finance/api/react`
-- AAS orchestrator core in `@finance/aas` with briefing/task-context modules, fail-closed quality-gate hooks, and bounded plan/briefing payload handling
+- AAS orchestrator core in `@finance/aas` with DAG scheduling, real parallel execution, checkpoint/resume, cancellation/timeouts, and fail-closed quality gates by default (`--unsafe-gates` bypass)
 - Debt router plus category and stock procedure coverage for CRUD-style finance flows
 - Account management flow with paginated list/detail/create/update/delete and atomic same-currency transfers
 - Project tagging system (`Transaction.project` = ObjectId-or-null) with project analytics and derived progress updates
@@ -142,13 +142,14 @@ These are tRPC router domains exposed from `packages/api/src/root.ts`.
 
 ## Environment Variables
 
-| Variable               | Scope                                     | Description                                              |
-| ---------------------- | ----------------------------------------- | -------------------------------------------------------- |
-| `DATABASE_URL`         | `packages/db/.env`, `apps/web/.env.local` | MongoDB connection string used by Prisma-backed packages |
-| `NEXTAUTH_SECRET`      | `apps/web/.env.local`                     | Secret used to sign/authenticate NextAuth JWT sessions   |
-| `NEXTAUTH_URL`         | `apps/web/.env.local`                     | Base URL for the web app auth callbacks                  |
-| `GOOGLE_CLIENT_ID`     | `apps/web/.env.local`                     | Optional Google OAuth client ID                          |
-| `GOOGLE_CLIENT_SECRET` | `apps/web/.env.local`                     | Optional Google OAuth client secret                      |
+| Variable               | Scope                                     | Description                                                |
+| ---------------------- | ----------------------------------------- | ---------------------------------------------------------- |
+| `DATABASE_URL`         | `packages/db/.env`, `apps/web/.env.local` | MongoDB connection string used by Prisma-backed packages   |
+| `NEXTAUTH_SECRET`      | `apps/web/.env.local`                     | Secret used to sign/authenticate NextAuth JWT sessions     |
+| `NEXTAUTH_URL`         | `apps/web/.env.local`                     | Base URL for the web app auth callbacks                    |
+| `GOOGLE_CLIENT_ID`     | `apps/web/.env.local`                     | Optional Google OAuth client ID                            |
+| `GOOGLE_CLIENT_SECRET` | `apps/web/.env.local`                     | Optional Google OAuth client secret                        |
+| `AAS_RUN_DIR`          | `packages/aas/.env.aas`                   | Base directory for AAS run checkpoints (`checkpoint.json`) |
 
 ## Troubleshooting (Known Local Environment Blockers)
 

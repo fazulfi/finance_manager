@@ -11,6 +11,11 @@ export class BriefingEngine {
   renderBriefing(input: BriefingEngineInput): string {
     const { task, context } = input;
 
+    const reference =
+      context.filesToModify.find((file) => file.toLowerCase().includes("plan")) ??
+      context.filesToModify[0] ??
+      "(run checkpoint)";
+
     return [
       `REQUEST SUMMARY\n${context.requestSummary}`,
       `STEP ID / TITLE\n${task.step}`,
@@ -23,7 +28,7 @@ export class BriefingEngine {
       "CONSTRAINTS\n- Follow repository conventions and security controls",
       "SUCCESS CRITERIA\n- Task completes with valid terminal payload",
       "VERIFICATION TARGET\n- Typed execution status reaches completed",
-      "REFERENCE\n- .opencode/plans/current-plan.md",
+      `REFERENCE\n- ${reference}`,
       "DO NOT\n- Bypass security checks\n- Skip quality gates\n- Use untrusted script paths",
       "EXPECTED OUTPUT FORMAT\nFILES CHANGED + ASSUMPTIONS MADE + VALIDATION RUN + RISKS",
     ].join("\n\n");

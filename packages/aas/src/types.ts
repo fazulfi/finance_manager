@@ -2,7 +2,9 @@
  * Core TypeScript interfaces for the Autonomous Agent System (AAS)
  */
 
-export type TaskExecutionStatus = "pending" | "running" | "completed" | "failed";
+import type { OrchestratorEventSink } from "./orchestrator-events.js";
+
+export type TaskExecutionStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 
 export type QualityGateStage = "sanity" | "reviewer" | "tester" | "security";
 
@@ -60,6 +62,9 @@ export interface Task {
   step: string;
   subagent: string;
   brief: string;
+  dependsOn?: string[];
+  priority?: number;
+  timeoutMs?: number;
   context: {
     requestSummary: string;
     currentState: Record<string, unknown>;
@@ -154,8 +159,8 @@ export interface AgentResult {
   agent: Agent;
   success: boolean;
   output: string;
-  errors?: string[];
-  metadata?: Record<string, unknown>;
+  errors?: string[] | undefined;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 /**
@@ -180,7 +185,45 @@ export interface AASConfig {
   enablePrettyLogging: boolean;
   maxConcurrentAgents: number;
   defaultAgentTimeout: number;
+  runDir?: string;
+  outputDir?: string;
+  logDir?: string;
   agentRegistry: Record<string, Agent>;
+}
+
+export interface OrchestratorTaskCheckpoint {
+  taskId: string;
+  status: TaskExecutionStatus;
+  retry: RetryMetadata;
+  gateResults: QualityGateResult[];
+  startTime?: string;
+  endTime?: string;
+  result?: {
+    success: boolean;
+    outputBytes?: number;
+    outputPreview?: string;
+    errors?: string[];
+  };
+}
+
+export interface OrchestratorRunCheckpoint {
+  version: 1;
+  runId: string;
+  createdAt: string;
+  updatedAt: string;
+  tasks: Record<string, OrchestratorTaskCheckpoint>;
+}
+
+export interface OrchestratorRunOptions {
+  runId?: string;
+  runDir?: string;
+  resume?: boolean;
+  resumeFromPath?: string;
+  concurrency?: number;
+  runTimeoutMs?: number;
+  defaultTaskTimeoutMs?: number;
+  checkpointIntervalMs?: number;
+  eventSink?: OrchestratorEventSink;
 }
 
 /**
@@ -192,11 +235,30 @@ export async function loadAASConfig(filePath: string): Promise<AASConfig> {
   const dotenv = await import("dotenv");
   await dotenv.config({ path: filePath });
 
-  return {
+  const maxConcurrentAgents = parseInt(process.env.AAS_MAX_CONCURRENT_AGENTS || "2", 10);
+  const defaultAgentTimeout = parseInt(process.env.AAS_DEFAULT_AGENT_TIMEOUT || "30000", 10);
+
+  const config: AASConfig = {
     logLevel: (process.env.AAS_LOG_LEVEL as AASConfig["logLevel"]) || "info",
-    enablePrettyLogging: true,
-    maxConcurrentAgents: parseInt(process.env.AAS_MAX_CONCURRENT_AGENTS || "2", 10),
-    defaultAgentTimeout: 30000,
+    enablePrettyLogging: (process.env.AAS_PRETTY_LOGGING ?? "true").toLowerCase() === "true",
+    maxConcurrentAgents:
+      Number.isFinite(maxConcurrentAgents) && maxConcurrentAgents > 0 ? maxConcurrentAgents : 2,
+    defaultAgentTimeout:
+      Number.isFinite(defaultAgentTimeout) && defaultAgentTimeout > 0 ? defaultAgentTimeout : 30000,
     agentRegistry: {},
   };
+
+  if (process.env.AAS_RUN_DIR) {
+    config.runDir = process.env.AAS_RUN_DIR;
+  }
+
+  if (process.env.AAS_OUTPUT_DIR) {
+    config.outputDir = process.env.AAS_OUTPUT_DIR;
+  }
+
+  if (process.env.AAS_LOG_DIR) {
+    config.logDir = process.env.AAS_LOG_DIR;
+  }
+
+  return config;
 }

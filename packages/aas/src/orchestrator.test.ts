@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AgentRunner } from "./agent-runner.js";
 import { AASOrchestrator } from "./orchestrator.js";
+import { RunStore } from "./run-store.js";
 import type { AASConfig, Agent, AgentResult, Task } from "./types.js";
 
 function createAgent(id: string): Agent {
@@ -30,6 +31,7 @@ function createConfig(): AASConfig {
     enablePrettyLogging: false,
     maxConcurrentAgents: 1,
     defaultAgentTimeout: 50,
+    runDir: "packages/aas/.tmp-orchestrator-runs",
     agentRegistry: {
       planner: createAgent("planner"),
       coder: createAgent("coder"),
@@ -203,5 +205,118 @@ describe("AASOrchestrator", () => {
     expect(state.status).toBe("failed");
     expect(state.result?.errors).toContain("review blocked");
     expect(runProcessSpy).not.toHaveBeenCalled();
+  });
+
+  it("executeRun respects DAG dependencies", async () => {
+    const sendMessage = vi.fn(async () => undefined);
+    const kill = vi.fn(async () => undefined);
+    const runnerClient = { sendMessage, kill };
+
+    vi.spyOn(AgentRunner, "runProcess").mockResolvedValue(runnerClient as never);
+    vi.spyOn(AgentRunner, "waitForCompletion").mockResolvedValue(true);
+    vi.spyOn(AgentRunner, "getOutput").mockReturnValue("agent-output");
+    vi.spyOn(AgentRunner, "getTerminalMessage").mockReturnValue({
+      type: "complete",
+      payload: {
+        success: true,
+        output: "agent-output",
+      } satisfies Pick<AgentResult, "success" | "output">,
+    });
+
+    const orchestrator = new AASOrchestrator(createConfig(), {
+      hooks: { qualityGates: gateHooks },
+    });
+
+    const a = createTask({ id: "a" });
+    const b = createTask({ id: "b", dependsOn: ["a"] });
+
+    const states = await orchestrator.executeRun([a, b], { concurrency: 2 });
+    expect(states.find((s) => s.taskId === "a")?.status).toBe("completed");
+    expect(states.find((s) => s.taskId === "b")?.status).toBe("completed");
+    expect(sendMessage).toHaveBeenCalledTimes(2);
+  });
+
+  it("executeRun cancels on per-task timeout and kills agent", async () => {
+    vi.useFakeTimers();
+    const sendMessage = vi.fn(async () => undefined);
+    const kill = vi.fn(async () => undefined);
+    const runnerClient = { sendMessage, kill };
+
+    vi.spyOn(AgentRunner, "runProcess").mockResolvedValue(runnerClient as never);
+    vi.spyOn(AgentRunner, "waitForCompletion").mockImplementation(
+      async () => await new Promise<boolean>(() => undefined),
+    );
+    vi.spyOn(AgentRunner, "getOutput").mockReturnValue("");
+    vi.spyOn(AgentRunner, "getTerminalMessage").mockReturnValue(undefined);
+
+    const orchestrator = new AASOrchestrator(createConfig(), {
+      hooks: { qualityGates: gateHooks },
+    });
+
+    const t = createTask({ id: "timeout", timeoutMs: 10 });
+    const runPromise = orchestrator.executeRun([t], { concurrency: 1, defaultTaskTimeoutMs: 10 });
+
+    await vi.advanceTimersByTimeAsync(20);
+    const states = await runPromise;
+
+    expect(states[0]?.status).toBe("cancelled");
+    expect(kill).toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it("executeRun resumes from checkpoint and skips completed tasks", async () => {
+    const config = createConfig();
+    const orchestrator = new AASOrchestrator(config, {
+      hooks: { qualityGates: gateHooks },
+    });
+
+    const sendMessage = vi.fn(async () => undefined);
+    const kill = vi.fn(async () => undefined);
+    const runnerClient = { sendMessage, kill };
+
+    vi.spyOn(AgentRunner, "runProcess").mockResolvedValue(runnerClient as never);
+    vi.spyOn(AgentRunner, "waitForCompletion").mockResolvedValue(true);
+    vi.spyOn(AgentRunner, "getOutput").mockReturnValue("agent-output");
+    vi.spyOn(AgentRunner, "getTerminalMessage").mockReturnValue({
+      type: "complete",
+      payload: {
+        success: true,
+        output: "agent-output",
+      } satisfies Pick<AgentResult, "success" | "output">,
+    });
+
+    const runId = "resume-run";
+    const runDir = config.runDir ?? "packages/aas/.tmp-orchestrator-runs";
+    const store = new RunStore({ runId, runDir });
+    await store.writeCheckpoint({
+      version: 1,
+      runId,
+      createdAt: new Date(0).toISOString(),
+      updatedAt: new Date(0).toISOString(),
+      tasks: {
+        a: {
+          taskId: "a",
+          status: "completed",
+          retry: { attempt: 1, maxAttempts: 2, canRetry: true },
+          gateResults: [],
+          startTime: new Date(0).toISOString(),
+          endTime: new Date(0).toISOString(),
+          result: { success: true, outputPreview: "ok" },
+        },
+      },
+    });
+
+    const a = createTask({ id: "a" });
+    const b = createTask({ id: "b", dependsOn: ["a"] });
+    const states = await orchestrator.executeRun([a, b], {
+      runId,
+      runDir,
+      resume: true,
+      concurrency: 1,
+    });
+
+    expect(states.find((s) => s.taskId === "a")?.status).toBe("completed");
+    expect(states.find((s) => s.taskId === "b")?.status).toBe("completed");
+    expect(sendMessage).toHaveBeenCalledTimes(1);
   });
 });

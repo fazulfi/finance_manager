@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { BudgetOverview } from "@/components/budget/BudgetOverview";
+import { ExportButton } from "@/components/common/ExportButton";
 
 export const metadata: Metadata = {
   title: "Budgets",
@@ -18,10 +19,15 @@ export default async function BudgetPage(): Promise<React.JSX.Element> {
     <div className="container mx-auto p-6 max-w-7xl">
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">Budgets</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Plan and track your spending across categories and projects
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Budgets</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Plan and track your spending across categories and projects
+            </p>
+          </div>
+          <ExportButton type="budgets" />
+        </div>
       </div>
 
       {/* Budget Overview Component */}

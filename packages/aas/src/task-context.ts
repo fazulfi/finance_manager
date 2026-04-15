@@ -9,10 +9,11 @@ import type {
 const DEFAULT_RETRY_CEILING = 2;
 
 const TRANSITIONS: Record<TaskExecutionStatus, TaskExecutionStatus[]> = {
-  pending: ["running"],
-  running: ["completed", "failed"],
+  pending: ["running", "cancelled"],
+  running: ["completed", "failed", "cancelled"],
   completed: [],
   failed: ["pending"],
+  cancelled: [],
 };
 
 export function buildTaskContext(

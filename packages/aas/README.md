@@ -14,10 +14,11 @@ pnpm add @finance/aas
 
 ## Features
 
-- **Agent Definition**: Define agents with specific permissions and capabilities
-- **Task Execution**: Queue and execute tasks across multiple agents
-- **Process Management**: Control process execution with timeouts and environment variables
-- **Logging**: Structured logging with pino (supports pretty logging)
+- **DAG Scheduling**: Run tasks with explicit dependencies and deterministic ordering
+- **Parallel Execution**: Real concurrent execution via injected executor (no simulation)
+- **Checkpoint/Resume**: Persist run state (`checkpoint.json`) and resume safely
+- **Cancellation/Timeouts**: Run-level and per-task abort support wired into execution
+- **Fail-Closed Gates**: Quality gate hooks fail-closed by default; bypass is explicit (`--unsafe-gates`)
 - **Type Safety**: Full TypeScript support with Zod validation
 
 ## Configuration
@@ -30,12 +31,16 @@ cp packages/aas/.env.aas .env.aas
 
 Key environment variables:
 
-| Variable                    | Default  | Description                                            |
-| --------------------------- | -------- | ------------------------------------------------------ |
-| `AAS_LOG_LEVEL`             | `info`   | Logging level (trace, debug, info, warn, error, fatal) |
-| `AAS_PRETTY_LOGGING`        | `true`   | Enable human-readable logging                          |
-| `AAS_MAX_CONCURRENT_AGENTS` | `1`      | Maximum concurrent agent processes                     |
-| `AAS_DEFAULT_AGENT_TIMEOUT` | `300000` | Default timeout in milliseconds                        |
+| Variable                    | Default        | Description                                                    |
+| --------------------------- | -------------- | -------------------------------------------------------------- |
+| `AAS_LOG_LEVEL`             | `info`         | Logging level (trace, debug, info, warn, error, fatal)         |
+| `AAS_PRETTY_LOGGING`        | `true`         | Enable human-readable logging                                  |
+| `AAS_MAX_CONCURRENT_AGENTS` | `1`            | Maximum concurrent agent processes                             |
+| `AAS_DEFAULT_AGENT_TIMEOUT` | `300000`       | Default timeout in milliseconds                                |
+| `AAS_RUN_DIR`               | `./.aas/runs`  | Base directory for run checkpoints (`<runId>/checkpoint.json`) |
+| `AAS_OUTPUT_DIR`            | `./aas-output` | Output directory used by the runtime (if configured)           |
+| `AAS_LOG_DIR`               | `./aas-logs`   | Log output directory (if configured)                           |
+| `AAS_UNSAFE_GATES`          | unset          | If set to `1`/`true`/`yes`, bypasses quality gates (UNSAFE)    |
 
 ## Usage
 
@@ -103,6 +108,12 @@ node bin/start-aas
 node bin/run-agent <agent-id> --task-id <task-id>
 ```
 
+Common flags:
+
+- `node bin/start-aas --unsafe-gates` (explicit bypass; otherwise gates fail-closed)
+- `node bin/start-aas --concurrency 4 --run-id my-run --resume my-run`
+- `node bin/run-agent --timeout-ms 60000 --cancel-after-ms 5000 ...`
+
 ## Project Structure
 
 ```
@@ -128,6 +139,9 @@ pnpm --filter @finance/aas type-check
 
 # Lint
 pnpm --filter @finance/aas lint
+
+# Test
+pnpm --filter @finance/aas test
 
 # Build
 pnpm --filter @finance/aas build

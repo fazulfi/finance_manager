@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AccountList } from "@/components/accounts/AccountList";
+import { ExportButton } from "@/components/common/ExportButton";
 
 export const metadata: Metadata = {
   title: "Accounts",
@@ -20,10 +21,13 @@ export default function AccountsPage(): React.JSX.Element {
             Track balances and transfer funds securely.
           </p>
         </div>
-        <Link href="/accounts/new" className={buttonVariants({ className: "gap-2" })}>
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          New account
-        </Link>
+        <div className="flex items-center gap-3">
+          <ExportButton type="accounts" />
+          <Link href="/accounts/new" className={buttonVariants({ className: "gap-2" })}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            New account
+          </Link>
+        </div>
       </div>
 
       <AccountList />

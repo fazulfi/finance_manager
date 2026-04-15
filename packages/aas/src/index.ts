@@ -12,6 +12,9 @@ export type {
   BuildTaskContextOptions,
   OrchestratorHooks,
   OrchestratorOptions,
+  OrchestratorRunCheckpoint,
+  OrchestratorRunOptions,
+  OrchestratorTaskCheckpoint,
   PlanPersistenceResult,
   Process,
   QualityGateDecision,
@@ -29,6 +32,8 @@ export type {
   ThinkingLevel,
 } from "./types.js";
 
+export type { OrchestratorEvent, OrchestratorEventSink } from "./orchestrator-events.js";
+
 // Re-export AgentClient and AgentMessage from agent-client.ts
 export { AgentClient, agentLogger } from "./agent-client.js";
 export type { AgentMessage } from "./agent-client.js";
@@ -44,6 +49,9 @@ export { TaskQueue } from "./task-queue.js";
 
 // Re-export ParallelExecutionEngine from parallel-execution-engine.ts
 export { ParallelExecutionEngine } from "./parallel-execution-engine.js";
+
+export { DagScheduler } from "./dag-scheduler.js";
+export { RunStore } from "./run-store.js";
 
 // Re-export orchestration core modules
 export { BriefingEngine } from "./briefing-engine.js";

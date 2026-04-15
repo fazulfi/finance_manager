@@ -1,7 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { TaskQueue } from "./task-queue.js";
-import type { AgentResult, Task } from "./types.js";
+import type { Task } from "./types.js";
 
 const createTask = (id: string): Task => ({
   id,
@@ -17,83 +17,46 @@ const createTask = (id: string): Task => ({
   },
 });
 
-const createResult = (): AgentResult => ({
-  agent: {
-    id: "subagent-a",
-    name: "Subagent A",
-    mode: "subagent",
-    thinking: "low",
-    permission: {
-      read: [],
-      list: false,
-      glob: false,
-      grep: false,
-      lsp: false,
-      edit: false,
-      bash: false,
-      webfetch: false,
-      task: {},
-    },
-  },
-  success: true,
-  output: "ok",
-});
-
-type SetImmediateFn = (
-  callback: (...args: unknown[]) => void,
-  ...args: unknown[]
-) => NodeJS.Immediate;
-
-const nodeGlobal = globalThis as unknown as { setImmediate: SetImmediateFn };
-
 describe("TaskQueue", () => {
-  beforeEach(() => {
-    vi.spyOn(nodeGlobal, "setImmediate").mockImplementation(
-      () => ({}) as unknown as NodeJS.Immediate,
-    );
+  it("dequeues higher base priority first", () => {
+    const queue = new TaskQueue({ now: () => 0 });
+    const low = { ...createTask("low"), priority: 0 };
+    const high = { ...createTask("high"), priority: 5 };
+
+    queue.enqueue(low);
+    queue.enqueue(high);
+
+    expect(queue.dequeue(0)?.id).toBe("high");
+    expect(queue.dequeue(0)?.id).toBe("low");
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
+  it("applies aging to avoid starvation deterministically", () => {
+    let now = 0;
+    const queue = new TaskQueue({ now: () => now, agingMsPerPriority: 10 });
+
+    const olderLow = { ...createTask("older-low"), priority: 0 };
+    queue.enqueue(olderLow);
+
+    now = 200;
+    const newerHigh = { ...createTask("newer-high"), priority: 10 };
+    queue.enqueue(newerHigh);
+
+    // After 200ms, older-low has +20 aging boost; newer-high has +0 boost
+    expect(queue.dequeue(now)?.id).toBe("older-low");
+    expect(queue.dequeue(now)?.id).toBe("newer-high");
   });
 
-  it("enqueues/dequeues FIFO while respecting concurrency", () => {
-    const queue = new TaskQueue();
-    queue.maxConcurrent = 1;
+  it("waitForItem resolves on enqueue and close", async () => {
+    const queue = new TaskQueue({ now: () => 0 });
 
+    const wait = queue.waitForItem();
     queue.enqueue(createTask("t1"));
-    queue.enqueue(createTask("t2"));
+    await expect(wait).resolves.toBeUndefined();
 
-    expect(queue.dequeue()?.id).toBe("t1");
-    expect(queue.dequeue()).toBeNull();
-  });
+    queue.dequeue(0);
 
-  it("tracks completed and failed tasks", () => {
-    const queue = new TaskQueue();
-
-    queue.enqueue(createTask("t1"));
-    queue.enqueue(createTask("t2"));
-
-    queue.dequeue();
-    queue.complete("t1", createResult());
-
-    queue.dequeue();
-    queue.fail("t2", new Error("boom"));
-
-    expect(queue.completedCount).toBe(1);
-    expect(queue.failedCount).toBe(1);
-    expect(queue.failed[0]?.result?.errors).toEqual(["boom"]);
-    expect(queue.getStats()).toMatchObject({ total: 2, completed: 1, failed: 1 });
-  });
-
-  it("awaitAll resolves after final completion", async () => {
-    const queue = new TaskQueue();
-    queue.enqueue(createTask("t1"));
-    queue.dequeue();
-
-    const pending = queue.awaitAll();
-    queue.complete("t1", createResult());
-
-    await expect(pending).resolves.toBeUndefined();
+    const waitClosed = queue.waitForItem();
+    queue.close();
+    await expect(waitClosed).resolves.toBeUndefined();
   });
 });

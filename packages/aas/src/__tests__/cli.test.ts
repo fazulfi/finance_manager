@@ -11,7 +11,7 @@ describe("CLI contracts", () => {
 
     expect(source).toContain("new AASOrchestrator");
     expect(source).toContain("orchestrator.persistPlan");
-    expect(source).toContain("orchestrator.execute([task])");
+    expect(source).toContain("orchestrator.executeRun");
     expect(source).not.toContain("TaskQueue");
     expect(source).not.toContain("executeParallelWithCallback");
   });
