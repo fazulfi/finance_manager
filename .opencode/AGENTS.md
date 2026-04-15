@@ -52,6 +52,13 @@ packages/
 - `packages/api/src/trpc.ts` owns package-local session/context types and accepts injected `db` + `session`
 - Account transfer procedures must enforce business invariants server-side (source and destination accounts must be active and use the same currency)
 
+### AAS Runtime Conventions (established 2026-04-15)
+
+- Core AAS process communication lives in `packages/aas/src/core/` and is split by responsibility (`agent-client`, `agent-runner`, `agent-result-parser`, `task-queue`, `parallel-execution-engine`)
+- CLI launchers in `bin/` delegate to `@finance/aas` core modules (no duplicated orchestration logic in bin scripts)
+- Agent process execution must keep environment allowlist and output buffer limits enabled by default
+- Agent script invocation must resolve to trusted script paths only
+
 ### Input Validation Conventions (established 2026-04-12)
 
 - All MongoDB ID inputs MUST use the shared `objectId` Zod schema from `packages/api/src/trpc.ts` (regex: `/^[0-9a-fA-F]{24}$/`) — never bare `z.string()` for IDs
@@ -122,6 +129,7 @@ packages/
 - ❌ Unbounded string/array inputs — always add `.max()` constraints
 - ❌ Allow account transfers between inactive accounts or mismatched currencies
 - ❌ Store free-text project names in `Transaction.project` — only Project ObjectId or `null` is allowed
+- ❌ Disable or bypass AAS agent-client environment allowlist, output buffer caps, or trusted script-path checks
 
 ---
 
@@ -149,6 +157,7 @@ packages/
 | Phase 3.7 | Savings Goals Feature — Complete backend procedures and full web+mobile UI for savings goals; create/edit goals with name, target amount, deadline, account linkage; manual contributions with ownership validation; progress visualization with circular progress display; milestone detection at 25%, 50%, 75%, 100% of target amount with toast notifications; monthly savings calculation and projected completion date; SVG circular progress with milestone badges; goal cards with swipe-to-contribute gestures (mobile), optimistic UI updates, loading/error states, confirmation dialogs; web goals overview page with server-side data fetching, accounts selector, filters; mobile goals tab with Grid layout, touch-optimized inputs, pull-to-refresh; Prisma SavingsGoal model with soft delete support; full TypeScript type coverage; security: userId ownership validation, input constraints (goal name max 100, amount min 1 max 1M), date validation; Files created: goal.ts (3 procedures), web goals components (5), web goals page, mobile goals components (2), mobile goals page; verification: type-check PASS for all goal feature files | ✅ Complete | 2026-04-14 |
 | Phase 3.8 | Debt Management MVP — Shared debt analytics helpers, bounded analytics inputs with `maxMonths`/debt array caps, new `debtRouter` analytics procedures, web debts page/components (DebtCard, DebtForm, PaymentSchedule, SnowballCalculator) rendering infeasible/truncated states plus due-date clearing, API-level Vitest wiring and `debt.test.ts`; all new helpers covered by calculations tests | ✅ Complete | 2026-04-14 |
 | Phase 1 | AI-Assisted Agent System (AAS) Package Setup — Created packages/aas with TypeScript interfaces, CLI entry points, environment config, core types (Agent, Process, Task, AgentResult), bin/start-aas and bin/run-agent CLI scripts, .env.aas template, auto-discovered via pnpm-workspace.yaml, security audit completed | ✅ Complete | 2026-04-15 |
+| Phase 2 | AAS Core Communication — Implemented core communication components (`agent-client`, `agent-runner`, `agent-result-parser`, `task-queue`, `parallel-execution-engine`), updated CLI integration (`bin/run-agent.ts`, `bin/start-aas.ts`), added 6 AAS test files (16 passing tests), hardened process security (env allowlist, buffer caps, trusted script path), and added `@finance/aas` build script; verification: `@finance/aas` build/type-check/lint/test PASS, full monorepo `pnpm build` blocked by known Windows EPERM symlink issue in `@finance/web` (out-of-scope) | ✅ Complete | 2026-04-15 |
 | Phase 3.6 | Dashboard & Analytics — Comprehensive dashboard with 5 chart types (Income vs Expense line, Category Breakdown pie, Budget Progress horizontal bars, Cash Flow area, Recent Transactions list), overview cards (Total Balance, Net Cash Flow, Income, Expense), date range filters (7D, 30D, 3M, 6M, 1Y, Custom) with debouncing, account and category multi-select filters, quick actions (Add Transaction, Transfer, View Budgets, View Projects), web components (9: Dashboard, StatCard, Filters, 5 charts, RecentTransactions, QuickActions) using Recharts, mobile components (6: Dashboard, StatsRow, ChartCard, MobileBudgetProgressChart, MobileCategoryBreakdown, TransactionsList) using Victory Native, NativeWind styling, gesture support (swipe, pull-to-refresh), haptic feedback (expo-haptics), performance optimizations (debounce 300ms, virtualization, server-side aggregation, memoization); web uses Server Components for data fetching and Client Components for interactivity; verification: type-check PASS for dashboard-related code, manual testing checklist provided | ✅ Complete | 2026-04-14 |
 | Phase 3.1 | Budget Management System — Budget CRUD operations (create, read, update, delete) with Zod validation, budget type selection (WEEKLY/MONTHLY), period range validation (startDate/endDate must match budgetType), category selection required, budget list page with expense filter (frequent items first), budget detail page with type/period/category/amount/dates/spent/remaining/percentage, budget form supporting type/period/amount/category/name, budget overview card with formatted amounts and progress bar, budgetItem.spent field for embedded data, BudgetPeriod enum (WEEKLY, MONTHLY), budget overview stats showing totalBudget and totalSpent, BudgetCard component used across pages, BudgetForm with custom budget names, budget.resetBudget for spent recalculation via transaction queries, server-side tRPC caller for data fetching, TypeScript type safety throughout, SQL queries for budget list and overview; verification: type-check PASS for all 9 packages; UI review approved with minor usability issues (non-blocking) | ✅ Complete | 2026-04-13 |
 
@@ -201,8 +210,24 @@ _(Updated by docs agent after each completed phase)_
 - Manual verification still requires a running MongoDB instance for CRUD + schedule preview + snowball flows
 
 **Next:**
-- Phase 3.8 Multi-Currency & Polish (Week 14)
-- Continue Transaction list UI, notifications, and reports/exports planned later in Phase 3
+- Phase 2.1: AAS Core Communication (Process communication protocols, Agent lifecycle management)
+- Phase 2.2: AAS Orchestrator Implementation (TODOWrite, briefing engine, plan persistence)
+
+## Last Session (2026-04-15)
+- Done:
+  - Completed Phase 1: AI-Assisted Agent System (AAS) package infrastructure
+  - Created `packages/aas` package with TypeScript interfaces (Agent, Process, Task, AgentResult)
+  - Implemented CLI entry points (bin/start-aas, bin/run-agent)
+  - Created environment configuration template (packages/aas/.env.aas)
+  - Updated workspace registration (pnpm-workspace.yaml auto-discovers packages/aas)
+  - Full security audit completed with critical pre-implementation recommendations for Phase 2
+  - Documentation updated (CHANGELOG.md, AGENTS.md, CURRENT_CONTEXT.md)
+  - Git commit: 2bc9628
+  - Git push: successful (6d8b9fb..2bc9628)
+- In progress:
+  - None.
+- Next:
+  - Phase 2.1: AAS Core Communication — Implement agent communication infrastructure, agent-client.ts, agent-runner.ts
 
 ## Last Session (2026-04-14)
 - Done:

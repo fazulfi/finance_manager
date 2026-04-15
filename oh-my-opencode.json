@@ -1,0 +1,26 @@
+{
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json",
+
+  "agents": {
+    "sisyphus":          { "model": "z-ai/glm-4.7-flash" },
+    "hephaestus":        { "model": "z-ai/glm-4.7-flash" },
+    "prometheus":        { "model": "z-ai/glm-4.7-flash" },
+    "atlas":             { "model": "z-ai/glm-4.7-flash" },
+    "oracle":            { "model": "z-ai/glm-4.7-flash" },
+    "momus":             { "model": "z-ai/glm-4.7-flash" },
+    "explore":           { "model": "z-ai/glm-4.7-flash" },
+    "librarian":         { "model": "z-ai/glm-4.7-flash" },
+    "multimodal-looker": { "model": "z-ai/glm-4.7-flash" }
+  },
+
+  "categories": {
+    "quick":              { "model": "z-ai/glm-4.7-flash" },
+    "deep":               { "model": "z-ai/glm-4.7-flash" },
+    "ultrabrain":         { "model": "z-ai/glm-4.7-flash" },
+    "visual-engineering": { "model": "z-ai/glm-4.7-flash" },
+    "artistry":           { "model": "z-ai/glm-4.7-flash" },
+    "writing":            { "model": "z-ai/glm-4.7-flash" },
+    "unspecified-high":   { "model": "z-ai/glm-4.7-flash" },
+    "unspecified-low":    { "model": "z-ai/glm-4.7-flash" }
+  }
+}

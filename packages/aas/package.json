@@ -14,14 +14,19 @@
     "run-agent": "../bin/run-agent"
   },
   "scripts": {
+    "build": "tsc",
     "type-check": "tsc --noEmit",
-    "lint": "eslint src/ --max-warnings 0"
+    "lint": "eslint src/ --max-warnings 0",
+    "test": "vitest run",
+    "testWatch": "vitest",
+    "coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "chalk": "^5.4.1",
     "commander": "^12.1.0",
+    "dotenv": "^16.4.7",
     "pino": "^9.6.0",
     "pino-pretty": "^11.3.0",
-    "chalk": "^5.4.1",
     "tsx": "^4.19.0",
     "typescript": "^5.6.3",
     "zod": "^3.23.8"
@@ -29,11 +34,13 @@
   "devDependencies": {
     "@finance/eslint-config": "workspace:*",
     "@finance/tsconfig": "workspace:*",
+    "@types/chalk": "^2.2.0",
+    "@types/commander": "^2.12.5",
     "@types/node": "^20.0.0",
     "@types/pino": "^7.0.5",
     "@types/pino-pretty": "^5.0.0",
-    "@types/commander": "^2.12.5",
-    "@types/chalk": "^2.2.0",
-    "typescript": "^5.6.3"
+    "@vitest/ui": "^4.1.4",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
   }
 }

@@ -1,0 +1,240 @@
+import { describe, expect, it, beforeEach, vi, afterEach } from "vitest";
+import { AgentClient } from "../agent-client.js";
+import type { Agent } from "../types.js";
+
+describe("AgentClient", () => {
+  let mockAgent: Agent;
+  let mockProcess: any;
+  let mockStdin: any;
+  let mockStdout: any;
+  let mockStderr: any;
+
+  beforeEach(() => {
+    mockAgent = {
+      id: "test-agent-1",
+      name: "TestAgent",
+      mode: "primary" as const,
+      thinking: "medium" as const,
+      permission: {
+        read: ["/test"],
+        list: true,
+        glob: true,
+        grep: true,
+        lsp: true,
+        edit: true,
+        bash: true,
+        webfetch: true,
+        task: {},
+      },
+    };
+
+    // Mock process with child_process spawn
+    mockProcess = {
+      stdin: null,
+      stdout: mockStdout,
+      stderr: mockStderr,
+      kill: vi.fn(),
+      on: vi.fn(),
+      error: vi.fn(),
+      exit: vi.fn(),
+    };
+
+    mockStdin = {
+      write: vi.fn(),
+      destroy: vi.fn(),
+    };
+
+    mockStdout = {
+      on: vi.fn((event, callback) => {
+        if (event === "data") {
+          callback(Buffer.from('{"type":"response","payload":{}}\n'));
+        }
+      }),
+      destroy: vi.fn(),
+    };
+
+    mockStderr = {
+      on: vi.fn((event, callback) => {
+        if (event === "data") {
+          callback(Buffer.from(""));
+        }
+      }),
+      destroy: vi.fn(),
+    };
+
+    vi.mock("child_process", () => ({
+      spawn: vi.fn(() => mockProcess),
+    }));
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe("spawnAgent()", () => {
+    it("should create a valid agent client with correct ID", async () => {
+      const client = await AgentClient.spawnAgent(mockAgent, "/test/script.js");
+      expect(client.AgentId).toBe("test-agent-1");
+      expect(mockProcess).toHaveBeenCalled();
+    });
+
+    it("should set up environment variables correctly", async () => {
+      await AgentClient.spawnAgent(mockAgent, "/test/script.js");
+      expect(mockProcess).toHaveBeenCalledWith(
+        "node",
+        ["/test/script.js"],
+        expect.objectContaining({
+          stdio: ["pipe", "pipe", "pipe"],
+          env: expect.objectContaining({
+            AGENT_ID: "test-agent-1",
+            AGENT_NAME: "TestAgent",
+            AGENT_MODE: "primary",
+            AGENT_THINKING: "medium",
+            AGENT_PERMISSION_READ: '["/test"]',
+            AGENT_PERMISSION_LIST: "true",
+            AGENT_PERMISSION_GLOB: "true",
+            AGENT_PERMISSION_GREP: "true",
+            AGENT_PERMISSION_LSP: "true",
+            AGENT_PERMISSION_EDIT: "true",
+            AGENT_PERMISSION_BASH: "true",
+            AGENT_PERMISSION_WEBFETCH: "true",
+            AGENT_PERMISSION_TASK: "{}",
+          }),
+        })
+      );
+    });
+
+    it("should set up stdout data listener", async () => {
+      const client = await AgentClient.spawnAgent(mockAgent, "/test/script.js");
+      expect(mockStdout.on).toHaveBeenCalledWith(
+        "data",
+        expect.any(Function)
+      );
+    });
+
+    it("should set up stderr data listener", async () => {
+      const client = await AgentClient.spawnAgent(mockAgent, "/test/script.js");
+      expect(mockStderr.on).toHaveBeenCalledWith(
+        "data",
+        expect.any(Function)
+      );
+    });
+
+    it("should throw error if stdin initialization fails", async () => {
+      mockProcess.stdin = null;
+      await expect(
+        AgentClient.spawnAgent(mockAgent, "/test/script.js")
+      ).rejects.toThrow("Failed to initialize agent streams");
+    });
+  });
+
+  describe("sendMessage()", () => {
+    it("should send message to agent successfully", async () => {
+      const client = await AgentClient.spawnAgent(mockAgent, "/test/script.js");
+      await client.sendMessage({ type: "test", payload: {} });
+      expect(mockStdin.write).toHaveBeenCalledWith('{"type":"test","payload":{}}\n');
+    });
+
+    it("should throw error if agent not spawned", async () => {
+      const client = new AgentClient("test-agent-1");
+      client._process = null;
+      await expect(client.sendMessage({ type: "test", payload: {} })).rejects.toThrow(
+        "Cannot send message: agent not spawned or terminated"
+      );
+    });
+
+    it("should throw error if agent is terminated", async () => {
+      const client = await AgentClient.spawnAgent(mockAgent, "/test/script.js");
+      await client.kill();
+      await expect(client.sendMessage({ type: "test", payload: {} })).rejects.toThrow(
+        "Cannot send message: agent not spawned or terminated"
+      );
+    });
+
+    it("should handle message sending error gracefully", async () => {
+      mockStdin.write.mockImplementation(() => {
+        throw new Error("Write failed");
+      });
+      const client = await AgentClient.spawnAgent(mockAgent, "/test/script.js");
+      await expect(
+        client.sendMessage({ type: "test", payload: {} })
+      ).rejects.toThrow("Failed to send message");
+    });
+  });
+
+  describe("receiveMessage()", () => {
+    it("should return undefined when no messages are available", async () => {
+      const client = await AgentClient.spawnAgent(mockAgent, "/test/script.js");
+      const message = await client.receiveMessage();
+      expect(message).toBeUndefined();
+    });
+
+    it("should return latest message when available", async () => {
+      const client = await AgentClient.spawnAgent(mockAgent, "/test/script.js");
+      // Simulate receiving two messages
+      const firstMessage: any = { type: "message1", payload: {} };
+      const secondMessage: any = { type: "message2", payload: {} };
+      
+      const emitData = mockStdout.on.mock.calls.find(([event]) => event === "data")[1];
+      emitData(Buffer.from(JSON.stringify(firstMessage) + "\n"));
+      const msg1 = await client.receiveMessage();
+      
+      emitData(Buffer.from(JSON.stringify(secondMessage) + "\n"));
+      const msg2 = await client.receiveMessage();
+      
+      expect(msg1).toEqual(firstMessage);
+      expect(msg2).toEqual(secondMessage);
+    });
+
+    it("should parse JSON messages correctly", async () => {
+      const client = await AgentClient.spawnAgent(mockAgent, "/test/script.js");
+      const expectedMessage = { type: "result", payload: { data: "test" } };
+      
+      const emitData = mockStdout.on.mock.calls.find(([event]) => event === "data")[1];
+      emitData(Buffer.from(JSON.stringify(expectedMessage) + "\n"));
+      
+      const message = await client.receiveMessage();
+      expect(message).toEqual(expectedMessage);
+    });
+  });
+
+  describe("waitForMessage()", () => {
+    it("should wait for any message", async () => {
+      const client = await AgentClient.spawnAgent(mockAgent, "/test/script.js");
+      const emitData = mockStdout.on.mock.calls.find(([event]) => event === "data")[1];
+      
+      // Use setTimeout to ensure waitForMessage completes before message arrives
+      setTimeout(() => {
+        emitData(Buffer.from('{"type":"response","payload":{}}\n'));
+      }, 100);
+      
+      const message = await client.waitForMessage();
+      expect(message).toBeDefined();
+    });
+
+    it("should wait for specific message type", async () => {
+      const client = await AgentClient.spawnAgent(mockAgent, "/test/script.js");
+      const emitData = mockStdout.on.mock.calls.find(([event]) => event === "data")[1];
+      
+      setTimeout(() => {
+        emitData(Buffer.from('{"type":"complete","payload":{}}\n'));
+      }, 100);
+      
+      const message = await client.waitForMessage("complete");
+      expect(message).toBeDefined();
+      expect(message.type).toBe("complete");
+    });
+
+    it("should throw error if agent not spawned", async () => {
+      const client = new AgentClient("test-agent-1");
+      client._process = null;
+      await expect(client.waitForMessage()).rejects.toThrow(
+        "Cannot wait for message: agent not spawned or terminated"
+      );
+    });
+
+    it("should throw error if agent is terminated", async () => {
+      const client = await AgentClient.spawnAgent(mockAgent, "/test/script.js");
+      await client.kill();
+      await expect(client.waitForMessage()).rejects.toThrow(
+        "Cannot wait for mess

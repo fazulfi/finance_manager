@@ -87,6 +87,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- [AAS] Implement core communication components for agent execution, parsing, queueing, and parallel orchestration (`agent-client`, `agent-runner`, `agent-result-parser`, `task-queue`, `parallel-execution-engine`) (file: packages/aas/src/core/agent-client.ts)
+- [AAS] Add AAS-focused test coverage with 6 test files and 16 passing tests across core communication flows (file: packages/aas/src/**tests**/agent-client.test.ts)
+- [AAS] Add package build script for `@finance/aas` to standardize build pipeline checks (file: packages/aas/package.json)
+
+### Changed
+
+- [AAS] Update CLI integration entrypoints to use the new core communication pipeline (`bin/run-agent`, `bin/start-aas`) (file: bin/run-agent.ts)
+- [Verification] Confirm `@finance/aas` build, type-check, lint, and test pass; document full monorepo `pnpm build` failure as Windows EPERM symlink in `@finance/web` (informational, out-of-scope) (file: .opencode/CURRENT_CONTEXT.md)
+
+### Security
+
+- [Security] Harden AAS agent client execution with environment allowlist, output buffer caps, and trusted script path enforcement (file: packages/aas/src/core/agent-client.ts)
+
 - [Phase 1] AI-Assisted Agent System (AAS) package infrastructure
   - Created new `packages/aas` package with TypeScript interfaces, CLI entry points, and environment config
   - Core AAS types: Agent, Process, Task, AgentResult (file: `packages/aas/src/types.ts`)

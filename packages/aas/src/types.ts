@@ -99,3 +99,21 @@ export interface AASConfig {
   defaultAgentTimeout: number;
   agentRegistry: Record<string, Agent>;
 }
+
+/**
+ * Load AAS configuration from file
+ * @param filePath - Path to config file (default: .env.aas)
+ * @returns Promise resolving to AAS configuration
+ */
+export async function loadAASConfig(filePath: string): Promise<AASConfig> {
+  const dotenv = await import("dotenv");
+  await dotenv.config({ path: filePath });
+
+  return {
+    logLevel: (process.env.AAS_LOG_LEVEL as AASConfig["logLevel"]) || "info",
+    enablePrettyLogging: true,
+    maxConcurrentAgents: parseInt(process.env.AAS_MAX_CONCURRENT_AGENTS || "2", 10),
+    defaultAgentTimeout: 30000,
+    agentRegistry: {},
+  };
+}
