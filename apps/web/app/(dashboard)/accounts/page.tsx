@@ -11,7 +11,11 @@ export const metadata: Metadata = {
   description: "Manage your financial accounts",
 };
 
-export default function AccountsPage(): React.JSX.Element {
+export default function AccountsPage({
+  searchParams,
+}: {
+  searchParams?: { search?: string; type?: string };
+}): React.JSX.Element {
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6">
       <div className="flex items-center justify-between gap-4">
@@ -30,7 +34,7 @@ export default function AccountsPage(): React.JSX.Element {
         </div>
       </div>
 
-      <AccountList />
+      <AccountList initialSearch={searchParams?.search} initialType={searchParams?.type} />
     </div>
   );
 }

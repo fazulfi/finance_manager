@@ -3,12 +3,9 @@ import { transactionRouter, accountRouter, categoryRouter, createTRPCContext } f
 import { db } from "@finance/db";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { buttonVariants } from "@finance/ui";
 
 import { auth } from "@/auth";
-import { QuickAddButton } from "@/components/transactions/QuickAddButton";
-import { QuickAddSheet } from "@/components/transactions/QuickAddSheet";
 import { TransactionsFiltersWrapper } from "@/components/transactions/TransactionFiltersWrapper";
 import { TransactionListClient } from "@/components/transactions/TransactionList";
 import { ExportButton } from "@/components/common/ExportButton";
@@ -64,8 +61,6 @@ export default async function TransactionsPage({
     category?: string;
     dateFrom?: Date;
     dateTo?: Date;
-    amountMin?: number;
-    amountMax?: number;
     search?: string;
   } = {
     ...(accountId && { accountId }),
@@ -90,15 +85,9 @@ export default async function TransactionsPage({
               search,
             }}
           />
-          {typeof window !== "undefined" ? (
-            <Link href="/transactions/new">
-              <QuickAddButton onClick={() => {}} />
-            </Link>
-          ) : (
-            <Link href="/transactions/new" className={buttonVariants()}>
-              Add transaction
-            </Link>
-          )}
+          <Link href="/transactions/new" className={buttonVariants()}>
+            Add transaction
+          </Link>
         </div>
       </div>
 
@@ -106,13 +95,6 @@ export default async function TransactionsPage({
         filters={filters}
         accounts={accounts.items}
         categories={categories.items}
-        onFilterChange={(updatedFilters: any) => {
-          // Handler passed to Client component, so this should be safe
-          console.log("Filter change:", updatedFilters);
-        }}
-        onReset={() => {
-          window.location.href = "/transactions";
-        }}
         disabled={false}
       />
 
@@ -122,9 +104,6 @@ export default async function TransactionsPage({
           total: transactions.total,
           page: transactions.page,
           limit: transactions.limit,
-          refetch: () => {
-            window.location.reload();
-          },
         }}
       />
     </div>

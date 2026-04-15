@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 
+import { createCaller, createTRPCContext, type Session } from "@finance/api";
 import { db } from "@finance/db";
 import { expect, type Page } from "@playwright/test";
 import bcrypt from "bcryptjs";
@@ -88,6 +89,78 @@ export async function signupUser(page: Page, user: ReturnType<typeof createTestU
         },
       });
     }
+  }
+
+  // Seed accounts, transactions, and debts for e2e tests that need data
+  const userRecord = await db.user.findUnique({ where: { email: user.email }, select: { id: true, email: true, name: true } });
+  if (!userRecord) return;
+
+  const session: Session = { user: { id: userRecord.id, email: userRecord.email, name: userRecord.name } };
+  const caller = createCaller(createTRPCContext({ db, session }));
+
+  const existingAccounts = await caller.account.list({ page: 1, limit: 10 });
+  if (existingAccounts.total === 0) {
+    const checking = await caller.account.create({
+      name: "Checking Account", type: "CHECKING", currency: "IDR", initialBalance: 5000000,
+    });
+    await caller.account.create({
+      name: "Premium Savings Account", type: "SAVINGS", currency: "IDR", initialBalance: 10000000,
+    });
+    await caller.account.create({
+      name: "Credit Card", type: "CREDIT", currency: "IDR", initialBalance: 0,
+    });
+
+    // Seed a Food & Dining transaction so filter tests find data
+    const foodCat = await db.category.findFirst({ where: { userId, name: "Food & Dining" } });
+    if (foodCat) {
+      await caller.transaction.create({
+        accountId: checking.id,
+        date: new Date(),
+        amount: 75000,
+        currency: "IDR",
+        type: "EXPENSE",
+        category: "Food & Dining",
+        tags: [],
+        description: "Food purchase",
+        isRecurring: false,
+      });
+    }
+
+    // Seed a Housing transaction
+    const housingCat = await db.category.findFirst({ where: { userId, name: "Housing" } });
+    if (housingCat) {
+      await caller.transaction.create({
+        accountId: checking.id,
+        date: new Date(),
+        amount: 1500000,
+        currency: "IDR",
+        type: "EXPENSE",
+        category: "Housing",
+        tags: [],
+        description: "Monthly rent",
+        isRecurring: false,
+      });
+    }
+  }
+
+  const existingDebts = await caller.debt.list({ page: 1, limit: 10 });
+  if (existingDebts.total === 0) {
+    await caller.debt.create({
+      name: "Credit Card Debt",
+      type: "CREDIT_CARD",
+      totalAmount: 5000000,
+      remaining: 5000000,
+      interestRate: 24,
+      minPayment: 200000,
+    });
+    await caller.debt.create({
+      name: "Student Loan",
+      type: "STUDENT_LOAN",
+      totalAmount: 20000000,
+      remaining: 15000000,
+      interestRate: 5,
+      minPayment: 500000,
+    });
   }
 }
 

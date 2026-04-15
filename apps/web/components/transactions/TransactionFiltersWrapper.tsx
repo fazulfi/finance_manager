@@ -14,8 +14,6 @@ interface TransactionsFiltersWrapperProps {
   };
   accounts: Array<{ id: string; name: string; type: string }>;
   categories: Array<{ id: string; name: string; type: string }>;
-  onFilterChange: (filters: Partial<TransactionsFiltersWrapperProps["filters"]>) => void;
-  onReset: () => void;
   disabled?: boolean;
 }
 
@@ -23,13 +21,14 @@ export function TransactionsFiltersWrapper({
   filters,
   accounts,
   categories,
-  onFilterChange,
-  onReset,
   disabled = false,
 }: TransactionsFiltersWrapperProps) {
   return (
     <TransactionFiltersClient
-      {...{ filters, accounts, categories, onFilterChange, onReset, disabled }}
+      filters={filters}
+      accounts={accounts}
+      categories={categories}
+      disabled={disabled}
     />
   );
 }

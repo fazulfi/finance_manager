@@ -2,7 +2,7 @@
 
 import { Button } from "@finance/ui";
 import { Filter, X } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 
 interface TransactionFiltersProps {
   filters: {
@@ -16,83 +16,72 @@ interface TransactionFiltersProps {
   };
   accounts: Array<{ id: string; name: string; type: string }>;
   categories: Array<{ id: string; name: string; type: string }>;
-  onFilterChange: (filters: Partial<TransactionFiltersProps["filters"]>) => void;
-  onReset: () => void;
   disabled?: boolean;
 }
+
+const INPUT_CLASS =
+  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
 export function TransactionFiltersClient({
   filters,
   accounts,
   categories,
-  onFilterChange,
-  onReset,
   disabled = false,
 }: TransactionFiltersProps): React.JSX.Element {
-  const [searchDraft, setSearchDraft] = useState(filters.search ?? "");
+  const [draft, setDraft] = useState({
+    search: filters.search ?? "",
+    accountId: filters.accountId ?? "",
+    category: filters.category ?? "",
+    dateFrom: filters.dateFrom ? (filters.dateFrom.toISOString().split("T")[0] ?? "") : "",
+    dateTo: filters.dateTo ? (filters.dateTo.toISOString().split("T")[0] ?? "") : "",
+  });
 
-  useEffect(() => {
-    setSearchDraft(filters.search ?? "");
-  }, [filters.search]);
+  const hasActiveFilters = !!(
+    filters.accountId ||
+    filters.category ||
+    filters.dateFrom ||
+    filters.dateTo ||
+    filters.search
+  );
+  const hasActiveDateFilter = !!(filters.dateFrom || filters.dateTo);
 
-  const hasActiveFilters =
-    !!filters.accountId || !!filters.category || !!filters.dateFrom || !!filters.dateTo;
+  const buildUrl = useCallback(
+    (overrides: Partial<typeof draft> = {}) => {
+      const merged = { ...draft, ...overrides };
+      const params = new URLSearchParams();
+      if (merged.search) params.set("search", merged.search);
+      if (merged.accountId) params.set("accountId", merged.accountId);
+      if (merged.category) params.set("category", merged.category);
+      if (merged.dateFrom) params.set("dateFrom", merged.dateFrom);
+      if (merged.dateTo) params.set("dateTo", merged.dateTo);
+      const qs = params.toString();
+      return `/transactions${qs ? `?${qs}` : ""}`;
+    },
+    [draft],
+  );
 
-  const handleFilterChange = useCallback((updatedFilters: any) => {
-    const params = new URLSearchParams(window.location.search);
-    if (updatedFilters.accountId !== undefined) {
-      if (updatedFilters.accountId) {
-        params.set("accountId", updatedFilters.accountId);
-      } else {
-        params.delete("accountId");
-      }
-    }
-    if (updatedFilters.category !== undefined) {
-      if (updatedFilters.category) {
-        params.set("category", updatedFilters.category);
-      } else {
-        params.delete("category");
-      }
-    }
-    if (updatedFilters.dateFrom !== undefined) {
-      params.set("dateFrom", updatedFilters.dateFrom.toISOString());
-    }
-    if (updatedFilters.dateTo !== undefined) {
-      params.set("dateTo", updatedFilters.dateTo.toISOString());
-    }
-    if (updatedFilters.search !== undefined) {
-      if (updatedFilters.search) {
-        params.set("search", updatedFilters.search);
-      } else {
-        params.delete("search");
-      }
-    }
-    const url = new URL(window.location.href);
-    url.search = params.toString();
-    window.location.href = url.toString();
-  }, []);
+  const applyFilters = useCallback(() => {
+    window.location.href = buildUrl();
+  }, [buildUrl]);
 
-  const handleReset = useCallback(() => {
+  const clearFilters = useCallback(() => {
     window.location.href = "/transactions";
   }, []);
 
-  const handleSearchChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value;
-      setSearchDraft(value);
-      const params = new URLSearchParams(window.location.search);
-      if (value.trim()) {
-        params.set("search", value.trim());
-      } else {
-        params.delete("search");
-      }
-      const url = new URL(window.location.href);
-      url.search = params.toString();
-      if (Object.keys(params).length > 0 || hasActiveFilters) {
-        window.location.href = url.toString();
-      }
+  const handleCategoryChange = useCallback(
+    (value: string) => {
+      setDraft((d) => ({ ...d, category: value }));
+      window.location.href = buildUrl({ category: value });
     },
-    [hasActiveFilters],
+    [buildUrl],
+  );
+
+  const handleAccountChange = useCallback(
+    (value: string) => {
+      setDraft((d) => ({ ...d, accountId: value }));
+      window.location.href = buildUrl({ accountId: value });
+    },
+    [buildUrl],
   );
 
   return (
@@ -102,34 +91,45 @@ export function TransactionFiltersClient({
         <h3 className="text-sm font-semibold">Filters</h3>
       </div>
 
+      {hasActiveDateFilter && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>Date range:</span>
+          <span>
+            {filters.dateFrom?.toLocaleDateString()} – {filters.dateTo?.toLocaleDateString()}
+          </span>
+        </div>
+      )}
+
       <div className="space-y-3 rounded-lg border bg-card p-4">
+        {/* Search */}
         <div className="space-y-2">
-          <label htmlFor="search" className="text-sm font-medium">
+          <label htmlFor="tx-search" className="text-sm font-medium">
             Search
           </label>
           <input
-            id="search"
+            id="tx-search"
+            aria-label="Search transactions"
             type="text"
-            value={searchDraft}
-            onChange={handleSearchChange}
+            value={draft.search}
+            onChange={(e) => setDraft((d) => ({ ...d, search: e.target.value }))}
             placeholder="Search transactions..."
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            disabled={disabled}
+            className={INPUT_CLASS}
           />
         </div>
 
+        {/* Account */}
         <div className="space-y-2">
-          <label htmlFor="accountFilter" className="text-sm font-medium">
+          <label htmlFor="tx-account" className="text-sm font-medium">
             Account
           </label>
           <select
-            id="accountFilter"
-            value={filters.accountId || ""}
-            onChange={(e) => {
-              const value = e.target.value || undefined;
-              handleFilterChange({ accountId: value });
-            }}
+            id="tx-account"
+            aria-label="Filter by account"
+            value={draft.accountId}
+            onChange={(e) => handleAccountChange(e.target.value)}
             disabled={disabled}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className={INPUT_CLASS}
           >
             <option value="">All accounts</option>
             {accounts.map((account) => (
@@ -140,67 +140,78 @@ export function TransactionFiltersClient({
           </select>
         </div>
 
+        {/* Category */}
         <div className="space-y-2">
-          <label htmlFor="categoryFilter" className="text-sm font-medium">
+          <label htmlFor="tx-category" className="text-sm font-medium">
             Category
           </label>
           <select
-            id="categoryFilter"
-            value={filters.category || ""}
-            onChange={(e) => {
-              const value = e.target.value || undefined;
-              handleFilterChange({ category: value });
-            }}
+            id="tx-category"
+            aria-label="Filter by category"
+            value={draft.category}
+            onChange={(e) => handleCategoryChange(e.target.value)}
             disabled={disabled}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className={INPUT_CLASS}
           >
             <option value="">All categories</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.name}>
+                {cat.name}
               </option>
             ))}
           </select>
         </div>
 
-        {filters.dateFrom && (
+        {/* Date range */}
+        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
-            <label htmlFor="dateFrom" className="text-sm font-medium">
-              From
+            <label htmlFor="tx-date-from" className="text-sm font-medium">
+              From date
             </label>
             <input
-              id="dateFrom"
+              id="tx-date-from"
+              aria-label="From date"
               type="date"
-              value={filters.dateFrom.toISOString().split("T")[0]}
-              onChange={(e) => handleFilterChange({ dateFrom: new Date(e.target.value) })}
+              value={draft.dateFrom}
+              onChange={(e) => setDraft((d) => ({ ...d, dateFrom: e.target.value }))}
               disabled={disabled}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className={INPUT_CLASS}
             />
           </div>
-        )}
-
-        {filters.dateTo && (
           <div className="space-y-2">
-            <label htmlFor="dateTo" className="text-sm font-medium">
-              To
+            <label htmlFor="tx-date-to" className="text-sm font-medium">
+              To date
             </label>
             <input
-              id="dateTo"
+              id="tx-date-to"
+              aria-label="To date"
               type="date"
-              value={filters.dateTo.toISOString().split("T")[0]}
-              onChange={(e) => handleFilterChange({ dateTo: new Date(e.target.value) })}
+              value={draft.dateTo}
+              onChange={(e) => setDraft((d) => ({ ...d, dateTo: e.target.value }))}
               disabled={disabled}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className={INPUT_CLASS}
             />
           </div>
-        )}
+        </div>
 
-        {hasActiveFilters && (
-          <Button type="button" variant="ghost" size="sm" onClick={handleReset} className="w-full">
-            <X className="mr-2 h-4 w-4" />
-            Clear filters
+        {/* Buttons */}
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            onClick={applyFilters}
+            disabled={disabled}
+            size="sm"
+            className="flex-1"
+          >
+            Apply Filters
           </Button>
-        )}
+          {hasActiveFilters && (
+            <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+              <X className="mr-2 h-4 w-4" />
+              Clear Filters
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

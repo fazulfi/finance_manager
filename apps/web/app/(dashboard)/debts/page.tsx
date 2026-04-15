@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 
 import { auth } from "@/auth";
 import { DebtForm } from "@/components/debts";
+import { DebtListClient } from "@/components/debts/DebtListClient";
 import { SnowballCalculator } from "@/components/debts/SnowballCalculator";
 import type { DebtType } from "@finance/types";
 
@@ -32,7 +33,11 @@ function formatPercent(value: number): string {
   return `${value.toFixed(1)}%`;
 }
 
-export default async function DebtsPage(): Promise<React.JSX.Element> {
+export default async function DebtsPage({
+  searchParams,
+}: {
+  searchParams?: { search?: string; status?: string };
+}): Promise<React.JSX.Element> {
   const session = await auth();
 
   if (!session?.user) {
@@ -136,20 +141,10 @@ export default async function DebtsPage(): Promise<React.JSX.Element> {
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(340px,1fr)]">
           <section className="space-y-4">
-            {debts.items.length === 0 ? (
-              <div className="rounded-lg border border-dashed p-10 text-center">
-                <h2 className="text-lg font-semibold">No debts yet</h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Add a debt to start tracking balances, schedules, and repayment order.
-                </p>
-              </div>
-            ) : (
-              <div className="rounded-lg border border-dashed p-6 text-center">
-                <p className="text-sm text-muted-foreground">
-                  {debts.items.length} debt{debts.items.length !== 1 ? "s" : ""} loaded
-                </p>
-              </div>
-            )}
+            <DebtListClient
+              initialSearch={searchParams?.search}
+              initialStatus={searchParams?.status}
+            />
           </section>
 
           <aside>
