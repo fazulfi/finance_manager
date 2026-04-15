@@ -19,6 +19,7 @@ pnpm add @finance/aas
 - **Checkpoint/Resume**: Persist run state (`checkpoint.json`) and resume safely
 - **Cancellation/Timeouts**: Run-level and per-task abort support wired into execution
 - **Fail-Closed Gates**: Quality gate hooks fail-closed by default; bypass is explicit (`--unsafe-gates`)
+- **Plan Execution**: Parse a markdown plan into a `Task[]` DAG (`dependsOn`) and execute it via `start-aas --plan-file`
 - **Type Safety**: Full TypeScript support with Zod validation
 
 ## Configuration
@@ -101,7 +102,7 @@ const process: Process = {
 ### Running AAS CLI
 
 ```bash
-# Start AAS server
+# Start AAS orchestration
 node bin/start-aas
 
 # Run a specific agent
@@ -112,7 +113,36 @@ Common flags:
 
 - `node bin/start-aas --unsafe-gates` (explicit bypass; otherwise gates fail-closed)
 - `node bin/start-aas --concurrency 4 --run-id my-run --resume my-run`
+- `node bin/start-aas --plan-file ./path/to/plan.md` (parse plan steps and execute as a DAG)
 - `node bin/run-agent --timeout-ms 60000 --cancel-after-ms 5000 ...`
+
+Notes:
+
+- `--plan-file` defaults to `.opencode/plans/current-plan.md` (local-only; intentionally not tracked in git).
+- `AAS_UNSAFE_GATES` is only honored if it is already set in the environment before the process starts (it is not enabled via dotenv from `.env.aas`).
+- `--run-dir` and resume/checkpoint paths are confined within the repo and validated using realpath-based checks to prevent symlink/junction escapes.
+
+### Plan File Format (Markdown)
+
+`start-aas --plan-file` looks for a `### Agent Execution Steps` section and parses `**Step N**` blocks.
+
+```markdown
+### Agent Execution Steps
+
+**Step 1** — SEQUENTIAL — Subagent: `planner`
+
+- OBJECTIVE: Draft an implementation plan.
+- SCOPE: Identify files to touch and verification steps.
+- EXPECTED OUTPUT: A concrete plan document.
+- SUCCESS CRITERIA: Plan covers required files and risks.
+
+**Step 2** — PARALLEL: after steps 1 — Subagent: `coder`
+
+- OBJECTIVE: Implement the planned changes.
+- SCOPE: Modify only the files listed in the plan.
+- EXPECTED OUTPUT: Passing tests and updated code.
+- SUCCESS CRITERIA: All verification targets pass.
+```
 
 ## Project Structure
 

@@ -1,19 +1,38 @@
-import { mkdir, rm, symlink } from "fs/promises";
+import { mkdtemp, rm, symlink, writeFile } from "fs/promises";
+import os from "os";
 import path from "path";
+import { fileURLToPath } from "url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { RunStore } from "./run-store.js";
 import type { OrchestratorRunCheckpoint } from "./types.js";
 
-const ROOT_DIR = path.resolve(process.cwd());
-const TEST_DIR = path.join(ROOT_DIR, "packages", "aas", ".tmp-run-store-tests");
-const OUTSIDE_DIR = path.resolve(ROOT_DIR, "..", ".tmp-run-store-outside");
+const AAS_PACKAGE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const ROOT_DIR = path.resolve(AAS_PACKAGE_DIR, "..", "..");
+
+const createdDirs: string[] = [];
 
 afterEach(async () => {
-  await rm(TEST_DIR, { recursive: true, force: true });
-  await rm(OUTSIDE_DIR, { recursive: true, force: true });
+  await Promise.all(
+    createdDirs
+      .splice(0, createdDirs.length)
+      .map((dir) => rm(dir, { recursive: true, force: true })),
+  );
 });
+
+async function makeRepoTempDir(): Promise<string> {
+  const parent = path.join(ROOT_DIR, "packages", "aas");
+  const dir = await mkdtemp(path.join(parent, ".tmp-run-store-"));
+  createdDirs.push(dir);
+  return dir;
+}
+
+async function makeOsTempDir(): Promise<string> {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "run-store-"));
+  createdDirs.push(dir);
+  return dir;
+}
 
 function checkpoint(runId: string): OrchestratorRunCheckpoint {
   return {
@@ -41,8 +60,8 @@ function checkpoint(runId: string): OrchestratorRunCheckpoint {
 
 describe("RunStore", () => {
   it("writes and reads checkpoint under safe run dir", async () => {
-    await mkdir(TEST_DIR, { recursive: true });
-    const store = new RunStore({ runId: "run-1", runDir: TEST_DIR });
+    const runDir = await makeRepoTempDir();
+    const store = new RunStore({ runId: "run-1", runDir });
     const input = checkpoint("run-1");
 
     const writeResult = await store.writeCheckpoint(input);
@@ -53,25 +72,34 @@ describe("RunStore", () => {
     expect(loaded?.tasks.t1?.result?.outputPreview).toBe("ok");
   });
 
-  it("rejects run dir outside repo root", () => {
-    expect(() => new RunStore({ runId: "run-2", runDir: path.resolve(ROOT_DIR, "..") })).toThrow(
-      /invalid runDir/i,
-    );
+  it("rejects run dir outside repo root", async () => {
+    const outside = await makeOsTempDir();
+    const store = new RunStore({ runId: "run-2", runDir: outside });
+    await expect(store.readCheckpoint()).rejects.toThrow(/invalid runDir/i);
   });
 
   it("rejects path traversal via runId", async () => {
-    await mkdir(TEST_DIR, { recursive: true });
-    const store = new RunStore({ runId: "..", runDir: TEST_DIR });
-    await expect(store.writeCheckpoint(checkpoint(".."))).rejects.toThrow(/invalid run store/i);
+    expect(
+      () => new RunStore({ runId: "..", runDir: path.join(ROOT_DIR, ".aas", "runs") }),
+    ).toThrow(/invalid runId/i);
+  });
+
+  it("rejects runIds containing path separators", () => {
+    const bad = ["../x", "..\\x", "a/b", "a\\b"];
+    for (const runId of bad) {
+      expect(() => new RunStore({ runId, runDir: path.join(ROOT_DIR, ".aas", "runs") })).toThrow(
+        /invalid runId/i,
+      );
+    }
   });
 
   it("rejects run dir symlink/junction that escapes repo root", async () => {
-    await mkdir(TEST_DIR, { recursive: true });
-    await mkdir(OUTSIDE_DIR, { recursive: true });
+    const runDir = await makeRepoTempDir();
+    const outside = await makeOsTempDir();
 
-    const linkDir = path.join(TEST_DIR, "link");
+    const linkDir = path.join(runDir, "link");
     try {
-      await symlink(OUTSIDE_DIR, linkDir, process.platform === "win32" ? "junction" : "dir");
+      await symlink(outside, linkDir, process.platform === "win32" ? "junction" : "dir");
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
       if (code === "EPERM" || code === "EACCES" || code === "ENOTSUP") {
@@ -84,9 +112,31 @@ describe("RunStore", () => {
     await expect(store.writeCheckpoint(checkpoint("run-4"))).rejects.toThrow(/invalid runDir/i);
   });
 
+  it("rejects reading checkpoint outside run dir via junction escape", async () => {
+    const runDir = await makeRepoTempDir();
+    const outside = await makeOsTempDir();
+
+    const outsideCheckpointPath = path.join(outside, "checkpoint.json");
+    await writeFile(outsideCheckpointPath, JSON.stringify(checkpoint("run-5")), "utf8");
+
+    const runLink = path.join(runDir, "run-5");
+    try {
+      await symlink(outside, runLink, process.platform === "win32" ? "junction" : "dir");
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === "EPERM" || code === "EACCES" || code === "ENOTSUP") {
+        return;
+      }
+      throw error;
+    }
+
+    const store = new RunStore({ runId: "run-5", runDir });
+    await expect(store.readCheckpoint()).rejects.toThrow(/invalid run store/i);
+  });
+
   it("caps checkpoint output preview bytes", async () => {
-    await mkdir(TEST_DIR, { recursive: true });
-    const store = new RunStore({ runId: "run-3", runDir: TEST_DIR, maxCheckpointBytes: 64 * 1024 });
+    const runDir = await makeRepoTempDir();
+    const store = new RunStore({ runId: "run-3", runDir, maxCheckpointBytes: 64 * 1024 });
 
     const huge = "x".repeat(64 * 1024);
     const input = checkpoint("run-3");

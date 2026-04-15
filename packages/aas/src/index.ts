@@ -60,3 +60,7 @@ export { buildTaskContext, canTransition, withTaskStatus } from "./task-context.
 
 // Re-export loadAASConfig from types.ts
 export { loadAASConfig } from "./types.js";
+
+export { parsePlanMarkdown } from "./plan-parser.js";
+export { planToRun } from "./plan-to-run.js";
+export { schemas, PLAN_LIMITS } from "./plan-schema.js";

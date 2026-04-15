@@ -1,11 +1,13 @@
 import { randomBytes } from "crypto";
 import { mkdir, open, readFile, rename, stat, unlink, realpath } from "fs/promises";
 import path from "path";
+import { fileURLToPath } from "url";
 
 import type { OrchestratorRunCheckpoint } from "./types.js";
 
-const DEFAULT_RUN_DIR = path.resolve(process.cwd(), ".aas", "runs");
-const REPO_ROOT_DIR = path.resolve(process.cwd());
+const AAS_PACKAGE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const REPO_ROOT_DIR = path.resolve(AAS_PACKAGE_DIR, "..", "..");
+const DEFAULT_RUN_DIR = path.resolve(REPO_ROOT_DIR, ".aas", "runs");
 
 const MAX_CHECKPOINT_BYTES = 256 * 1024;
 const MAX_OUTPUT_PREVIEW_BYTES = 8 * 1024;
@@ -19,16 +21,15 @@ export class RunStore {
   private readonly maxCheckpointBytes: number;
 
   constructor(input: { runId: string; runDir?: string; maxCheckpointBytes?: number }) {
-    this.runId = input.runId;
-    const configured = input.runDir ?? process.env.AAS_RUN_DIR ?? process.env.AAS_OUTPUT_DIR;
-    const baseDir = configured ? path.resolve(configured) : DEFAULT_RUN_DIR;
+    this.runId = assertValidRunId(input.runId);
 
-    const relativeToRepo = path.relative(REPO_ROOT_DIR, baseDir);
-    if (relativeToRepo.startsWith("..") || path.isAbsolute(relativeToRepo)) {
-      throw new Error(
-        `Invalid runDir: ${baseDir}. Allowed base directory is within ${REPO_ROOT_DIR}`,
-      );
-    }
+    const configuredRaw = input.runDir ?? process.env.AAS_RUN_DIR ?? process.env.AAS_OUTPUT_DIR;
+    const configured = typeof configuredRaw === "string" ? configuredRaw.trim() : "";
+    const baseDir = configured
+      ? path.resolve(
+          path.isAbsolute(configured) ? configured : path.resolve(REPO_ROOT_DIR, configured),
+        )
+      : DEFAULT_RUN_DIR;
 
     this.baseDir = baseDir;
     this.checkpointPath = path.join(this.baseDir, this.runId, "checkpoint.json");
@@ -51,8 +52,9 @@ export class RunStore {
   }
 
   async readCheckpoint(): Promise<OrchestratorRunCheckpoint | null> {
+    const safePath = await this.resolveSafePath(this.checkpointPath);
     try {
-      const info = await stat(this.checkpointPath);
+      const info = await stat(safePath);
       if (!info.isFile()) {
         return null;
       }
@@ -61,7 +63,7 @@ export class RunStore {
           `Checkpoint exceeds maximum size (${info.size} bytes > ${this.maxCheckpointBytes} bytes)`,
         );
       }
-      const content = await readFile(this.checkpointPath, "utf8");
+      const content = await readFile(safePath, "utf8");
       const parsed = JSON.parse(content) as OrchestratorRunCheckpoint;
       if (!parsed || typeof parsed !== "object" || parsed.runId !== this.runId) {
         return null;
@@ -180,6 +182,22 @@ export class RunStore {
       );
     }
 
+    // Reject file symlinks that escape the base directory.
+    try {
+      const safeTargetReal = await realpath(safeTarget);
+      const relativeTargetReal = path.relative(baseReal, safeTargetReal);
+      if (relativeTargetReal.startsWith("..") || path.isAbsolute(relativeTargetReal)) {
+        throw new Error(
+          `Invalid run store target: ${safeTargetReal}. Allowed base directory is ${baseReal}`,
+        );
+      }
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== "ENOENT") {
+        throw error;
+      }
+    }
+
     try {
       const stats = await stat(safeTarget);
       if (stats.isDirectory()) {
@@ -194,6 +212,20 @@ export class RunStore {
 
     return safeTarget;
   }
+}
+
+function assertValidRunId(value: string): string {
+  const runId = typeof value === "string" ? value.trim() : "";
+  if (!runId) {
+    throw new Error("Invalid runId: must be non-empty");
+  }
+  if (!/^[A-Za-z0-9._-]+$/.test(runId)) {
+    throw new Error(`Invalid runId: ${runId}`);
+  }
+  if (runId === "." || runId === "..") {
+    throw new Error(`Invalid runId: ${runId}`);
+  }
+  return runId;
 }
 
 async function findNearestExistingDir(start: string): Promise<string> {

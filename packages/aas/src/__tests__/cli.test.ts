@@ -10,6 +10,8 @@ describe("CLI contracts", () => {
     const source = await readFile(path.resolve(ROOT_DIR, "bin/start-aas.ts"), "utf8");
 
     expect(source).toContain("new AASOrchestrator");
+    expect(source).toContain("parsePlanMarkdown");
+    expect(source).toContain("planToRun");
     expect(source).toContain("orchestrator.persistPlan");
     expect(source).toContain("orchestrator.executeRun");
     expect(source).not.toContain("TaskQueue");

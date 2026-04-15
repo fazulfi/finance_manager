@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { access } from "fs/promises";
+import { access, open, realpath } from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -8,7 +8,13 @@ import { Command } from "commander";
 import pino from "pino";
 import pinoPretty from "pino-pretty";
 
-import { AASOrchestrator, loadAASConfig } from "../index.js";
+import {
+  AASOrchestrator,
+  loadAASConfig,
+  parsePlanMarkdown,
+  PLAN_LIMITS,
+  planToRun,
+} from "../index.js";
 import type { AASConfig, Agent, QualityGateHooks, Task } from "../index.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -49,39 +55,55 @@ export async function runStartAAS(options: StartAASOptions): Promise<number> {
 
   try {
     const envPath = await resolveEnvFilePath(options.envFile);
+    const unsafeEnvBeforeDotenv = process.env.AAS_UNSAFE_GATES === "1";
     const dotenv = await import("dotenv");
     dotenv.config({ path: envPath });
 
     const loadedConfig = await loadAASConfig(envPath);
     const config = buildRuntimeConfig(loadedConfig, normalizeLogLevel(options.logLevel));
-    const unsafeGates =
-      Boolean(options.unsafeGates) || /^(1|true|yes)$/i.test(process.env.AAS_UNSAFE_GATES ?? "");
+    const unsafeGates = Boolean(options.unsafeGates) || unsafeEnvBeforeDotenv;
     const hooks = createDefaultQualityGateHooks("start-aas", { unsafeGates });
     const orchestrator = new AASOrchestrator(config, {
       hooks: { qualityGates: hooks },
       planFilePath: options.planFile,
     });
 
-    const task = createTaskFromOptions(options);
-    logger.info(
-      {
-        taskId: task.id,
-        subagent: task.subagent,
-        step: task.step,
-        maxConcurrentAgents: config.maxConcurrentAgents,
-      },
-      "Dispatching orchestrator task",
-    );
+    const runControl = await normalizeRunControl(options);
+    const planTasks = await loadExecutablePlanTasks(options.planFile, {
+      ...(typeof runControl.taskTimeoutMs === "number"
+        ? { defaultTimeoutMs: runControl.taskTimeoutMs }
+        : {}),
+    });
+    const tasks = planTasks ?? [createTaskFromOptions(options)];
+
+    if (tasks.length === 1) {
+      const task = tasks[0];
+      logger.info(
+        {
+          taskId: task?.id,
+          subagent: task?.subagent,
+          step: task?.step,
+          maxConcurrentAgents: config.maxConcurrentAgents,
+        },
+        "Dispatching orchestrator task",
+      );
+    } else {
+      logger.info(
+        { taskCount: tasks.length, maxConcurrentAgents: config.maxConcurrentAgents },
+        "Dispatching orchestrator run from plan DAG",
+      );
+    }
 
     try {
-      const persistedPlan = await orchestrator.persistPlan(buildRuntimePlan(task));
+      const persistedPlan = await orchestrator.persistPlan(
+        buildRuntimePlan(tasks[0] ?? createTaskFromOptions(options)),
+      );
       logger.info({ persistedPlan }, "Persisted current plan artifact");
     } catch (error) {
       logger.warn({ error }, "Plan persistence skipped due to runtime safeguard");
     }
 
-    const runControl = normalizeRunControl(options);
-    const states = await orchestrator.executeRun([task], {
+    const states = await orchestrator.executeRun(tasks, {
       ...(runControl.concurrency ? { concurrency: runControl.concurrency } : {}),
       ...(runControl.runId ? { runId: runControl.runId } : {}),
       ...(runControl.runDir ? { runDir: runControl.runDir } : {}),
@@ -91,18 +113,90 @@ export async function runStartAAS(options: StartAASOptions): Promise<number> {
       ...(runControl.taskTimeoutMs ? { defaultTaskTimeoutMs: runControl.taskTimeoutMs } : {}),
     });
 
-    const state = states.find((s) => s.taskId === task.id);
-    if (!state || state.status !== "completed" || !state.result?.success) {
-      logger.error({ state }, "Orchestrator task failed");
+    const failures = states.filter(
+      (state) => state.status !== "completed" || !state.result?.success,
+    );
+    if (failures.length > 0) {
+      logger.error({ failures }, "Orchestrator run failed");
       return 1;
     }
 
-    logger.info({ taskId: task.id, status: state.status }, "AAS orchestration completed");
+    logger.info({ taskCount: tasks.length }, "AAS orchestration completed");
     return 0;
   } catch (error) {
     logger.error({ error }, "Failed to start AAS orchestration");
     return 1;
   }
+}
+
+async function loadExecutablePlanTasks(
+  planFile: string,
+  options: { defaultTimeoutMs?: number },
+): Promise<Task[] | null> {
+  const resolvedPath = path.resolve(planFile);
+  const limitBytes = PLAN_LIMITS.maxInputBytes;
+
+  let content = "";
+  try {
+    const handle = await open(resolvedPath, "r");
+    try {
+      const stat = await handle.stat();
+      if (stat.size > limitBytes) {
+        const error = new Error(
+          `Plan file exceeds maximum size (${stat.size} bytes > ${limitBytes} bytes): ${resolvedPath}`,
+        );
+        error.name = "PlanFileTooLargeError";
+        throw error;
+      }
+
+      content = await handle.readFile({ encoding: "utf8" });
+    } finally {
+      await handle.close();
+    }
+  } catch (error) {
+    if (error instanceof Error && error.name === "PlanFileTooLargeError") {
+      throw error;
+    }
+
+    logger.warn(
+      { error, planFilePath: resolvedPath },
+      "Plan file unreadable; falling back to single-task mode",
+    );
+    return null;
+  }
+
+  const seemsExecutablePlan =
+    /###\s+Agent Execution Steps\s*$/im.test(content) || /^\s*\*\*Step\s+\d+\*\*/im.test(content);
+
+  let parsed: ReturnType<typeof parsePlanMarkdown>;
+  try {
+    parsed = parsePlanMarkdown(content);
+  } catch (error) {
+    if (seemsExecutablePlan) {
+      throw error;
+    }
+
+    logger.warn(
+      { error, planFilePath: resolvedPath },
+      "Failed to parse plan file (no executable steps detected); falling back to single-task mode",
+    );
+    return null;
+  }
+
+  if (!Array.isArray(parsed.steps) || parsed.steps.length === 0) {
+    logger.warn(
+      { planFilePath: resolvedPath, warning: parsed.warning },
+      "Plan file contains no executable steps; falling back to single-task mode",
+    );
+    return null;
+  }
+
+  return planToRun(parsed.steps, {
+    ...(typeof options.defaultTimeoutMs === "number"
+      ? { defaultTimeoutMs: options.defaultTimeoutMs }
+      : {}),
+    planFilePath: planFile,
+  });
 }
 
 export function createStartAASProgram(): Command {
@@ -123,7 +217,10 @@ export function createStartAASProgram(): Command {
     .option("--run-id <id>", "Run id override")
     .option("--run-dir <path>", "Run directory (must be within repo)")
     .option("--resume <checkpointPath|runId>", "Resume from checkpoint")
-    .option("--unsafe-gates", "Pass all quality gates (UNSAFE; equivalent to AAS_UNSAFE_GATES=1)")
+    .option(
+      "--unsafe-gates",
+      "Pass all quality gates (UNSAFE; equivalent to pre-set AAS_UNSAFE_GATES=1)",
+    )
     .option("--run-timeout-ms <n>", "Global run timeout in ms", (value) => parseInt(value, 10))
     .option("--task-timeout-ms <n>", "Default per-task timeout in ms", (value) =>
       parseInt(value, 10),
@@ -283,7 +380,46 @@ async function resolveEnvFilePath(inputPath: string): Promise<string> {
   return candidates[0] ?? path.resolve(process.cwd(), inputPath);
 }
 
-function normalizeRunControl(options: StartAASOptions): {
+function isPathWithin(parentPath: string, childPath: string): boolean {
+  const rel = path.relative(parentPath, childPath);
+  if (rel === "") {
+    return true;
+  }
+  return !rel.startsWith("..") && !path.isAbsolute(rel);
+}
+
+async function realpathAllowMissing(targetPath: string): Promise<string> {
+  const resolved = path.resolve(targetPath);
+  const suffix: string[] = [];
+
+  let cursor = resolved;
+  let done = false;
+  while (!done) {
+    try {
+      const realAncestor = await realpath(cursor);
+      done = true;
+      return suffix.length > 0 ? path.join(realAncestor, ...suffix) : realAncestor;
+    } catch (error) {
+      if (cursor === path.dirname(cursor)) {
+        throw error;
+      }
+      suffix.unshift(path.basename(cursor));
+      cursor = path.dirname(cursor);
+    }
+  }
+
+  throw new Error("Failed to resolve path");
+}
+
+async function resolveRunDir(runDir: string, repoRootReal: string): Promise<string> {
+  const runDirReal = await realpathAllowMissing(path.resolve(runDir));
+  if (!isPathWithin(repoRootReal, runDirReal)) {
+    throw new Error(`--run-dir must be within repo root (${repoRootReal})`);
+  }
+  return runDirReal;
+}
+
+async function normalizeRunControl(options: StartAASOptions): Promise<{
   concurrency?: number;
   runId?: string;
   runDir?: string;
@@ -291,7 +427,7 @@ function normalizeRunControl(options: StartAASOptions): {
   resumeFromPath?: string;
   runTimeoutMs?: number;
   taskTimeoutMs?: number;
-} {
+}> {
   const concurrency =
     typeof options.concurrency === "number" && Number.isFinite(options.concurrency)
       ? Math.max(1, Math.trunc(options.concurrency))
@@ -305,6 +441,8 @@ function normalizeRunControl(options: StartAASOptions): {
       ? Math.max(1, Math.trunc(options.taskTimeoutMs))
       : undefined;
 
+  const repoRootReal = await realpath(ROOT_DIR);
+
   const base = {
     ...(typeof concurrency === "number" ? { concurrency } : {}),
     ...(typeof runTimeoutMs === "number" ? { runTimeoutMs } : {}),
@@ -313,27 +451,37 @@ function normalizeRunControl(options: StartAASOptions): {
 
   const resumeArg = typeof options.resume === "string" ? options.resume.trim() : "";
   if (!resumeArg) {
+    const runDir = options.runDir ? await resolveRunDir(options.runDir, repoRootReal) : undefined;
     return {
       ...base,
       ...(options.runId ? { runId: options.runId } : {}),
-      ...(options.runDir ? { runDir: options.runDir } : {}),
+      ...(runDir ? { runDir } : {}),
       resume: false,
     };
   }
 
   if (resumeArg.endsWith(".json")) {
-    const resumePath = path.resolve(resumeArg);
+    const resumePathResolved = path.resolve(resumeArg);
+    const resumePath = await realpath(resumePathResolved);
     if (path.basename(resumePath) !== "checkpoint.json") {
       throw new Error("Resume path must point to checkpoint.json");
     }
+
     const runId = path.basename(path.dirname(resumePath));
-    const runDir = path.dirname(path.dirname(resumePath));
+    const runDirFromResume = path.dirname(path.dirname(resumePath));
+    const runDir = await resolveRunDir(runDirFromResume, repoRootReal);
+    if (!isPathWithin(runDir, resumePath)) {
+      throw new Error("Resume path must be within --run-dir");
+    }
 
     if (options.runId && options.runId !== runId) {
       throw new Error(`--run-id (${options.runId}) must match resume run id (${runId})`);
     }
-    if (options.runDir && path.resolve(options.runDir) !== path.resolve(runDir)) {
-      throw new Error(`--run-dir (${options.runDir}) must match resume run dir (${runDir})`);
+    if (options.runDir) {
+      const providedRunDir = await resolveRunDir(options.runDir, repoRootReal);
+      if (providedRunDir !== runDir) {
+        throw new Error(`--run-dir (${options.runDir}) must match resume run dir (${runDir})`);
+      }
     }
 
     return {
@@ -345,10 +493,12 @@ function normalizeRunControl(options: StartAASOptions): {
     };
   }
 
+  const runDir = options.runDir ? await resolveRunDir(options.runDir, repoRootReal) : undefined;
+
   return {
     ...base,
     runId: options.runId ?? resumeArg,
-    ...(options.runDir ? { runDir: options.runDir } : {}),
+    ...(runDir ? { runDir } : {}),
     resume: true,
   };
 }

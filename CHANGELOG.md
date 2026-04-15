@@ -96,6 +96,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [AAS] Add Phase 3 orchestrator core modules: `AASOrchestrator`, `BriefingEngine`, and task-context builder for gated orchestration flow (file: packages/aas/src/orchestrator.ts)
 - [AAS] Add Phase 3 orchestrator test suite (`orchestrator`, `briefing-engine`, `task-context`) and refresh CLI integration tests (file: packages/aas/src/orchestrator.test.ts)
 
+- [AAS] Add strict plan schema + fail-closed markdown plan parsing and plan-to-run DAG conversion (file: packages/aas/src/plan-parser.ts)
+- [AAS] CLI: accept `start-aas --plan-file <path>` to execute a plan DAG from markdown (file: packages/aas/src/cli/start-aas.ts)
+
 ### Changed
 
 - [Workflow] Document local-only agent workspace policy: `.opencode/` and `.kilo/` should stay untracked (file: README.md)
@@ -116,6 +119,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Security] Harden AAS agent client execution with environment allowlist, output buffer caps, and trusted script path enforcement (file: packages/aas/src/core/agent-client.ts)
 - [Security] Enforce fail-closed gate hooks, clamp retries from trusted orchestrator state only, add symlink-safe no-clobber plan persistence boundaries, and bound payload/briefing sizes in orchestration path (file: packages/aas/src/orchestrator.ts)
 - [Security] Enforce repo-root + run-dir boundary checks for checkpoint persistence, including symlink-safe realpath validation and size caps (file: packages/aas/src/run-store.ts)
+
+- [Security] Replace lexical repo-root checks with realpath-based confinement for RunStore resume/checkpoint paths (file: packages/aas/src/run-store.ts)
 
 - [Phase 1] AI-Assisted Agent System (AAS) package infrastructure
   - Created new `packages/aas` package with TypeScript interfaces, CLI entry points, and environment config
@@ -303,6 +308,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [API] Add `category.getById` and `stock.updatePrice` procedures for package consumers (file: `packages/api/src/routers/category.ts`)
 
 ### Fixed
+
+- [Web] Support dashboard list filtering via URL `searchParams` and simplify transactions CTA (file: apps/web/app/(dashboard)/transactions/page.tsx)
 
 - [Projects] Untag user-owned transactions (`project = null`) before deleting a project to prevent dangling project references (file: `packages/api/src/routers/project.ts`)
 
