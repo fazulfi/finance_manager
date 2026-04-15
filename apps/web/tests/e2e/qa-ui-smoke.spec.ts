@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { createTestUser, loginUser, signupUser } from "./helpers/browser";
 
 // Console error capture utilities
-async function captureConsoleErrors(page: import("playwright").Page) {
+async function captureConsoleErrors(page: import("@playwright/test").Page) {
   const errors: string[] = [];
   const warnings: string[] = [];
 

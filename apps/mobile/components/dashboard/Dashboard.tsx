@@ -37,7 +37,7 @@ export function Dashboard() {
   const recentTransactions = recentTransactionsResult?.items || [];
 
   const handleFabPress = () => {
-    router.push("/transactions/new");
+    router.push("/transactions/new" as any);
   };
 
   const formatCurrency = (value: number | null | undefined): string => {

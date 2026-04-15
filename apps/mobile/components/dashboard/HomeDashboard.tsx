@@ -63,7 +63,7 @@ export function HomeDashboard({
   };
 
   const handleFabPress = () => {
-    router.push("/transactions/new");
+    router.push("/transactions/new" as any);
   };
 
   const animatedFabStyle = useAnimatedStyle(() => ({

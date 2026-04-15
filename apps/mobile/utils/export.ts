@@ -36,7 +36,7 @@ export async function downloadCSV(config: ExportConfig): Promise<boolean> {
  * Format date for CSV
  */
 export function formatDateForCSV(date: Date): string {
-  return date.toISOString().split("T")[0];
+  return date.toISOString().split("T")[0] ?? "";
 }
 
 /**

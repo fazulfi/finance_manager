@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useState, useCallback } from "react";
+import { AppState, AppStateStatus } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 
 const POLLING_INTERVAL_MS = 30000; // 30 seconds
@@ -21,18 +22,12 @@ export function useRealtimeSync() {
   const [isOnline, setIsOnline] = useState(true);
   const queryClient = useQueryClient();
 
-  // Update online status
+  // Update online status via AppState (React Native)
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
+    const subscription = AppState.addEventListener("change", (state: AppStateStatus) => {
+      setIsOnline(state === "active");
+    });
+    return () => subscription.remove();
   }, []);
 
   // Poll for updates
