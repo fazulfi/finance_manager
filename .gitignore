@@ -71,3 +71,6 @@ prisma/migrations/
 # opencode — AI agent workspace (keep entire directory private/local)
 .opencode/
 .opencode/AGENTS.md
+
+# kilo — personal CLI config/workspace
+.kilo/
