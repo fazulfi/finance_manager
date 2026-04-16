@@ -197,6 +197,10 @@ pnpm --filter @finance/aas build
 - **TaskQueueEntry**: Queue state tracker
 - **AASConfig**: Runtime configuration
 
+### Quality gates
+
+- **`createPlanDrivenQualityGateHooks(options)`**: Build `QualityGateHooks` derived from a markdown plan. Use `getValidatedPlanFilePath` to read the plan via an orchestrator-validated path; set `unsafeGates: true` to bypass (equivalent to `start-aas --unsafe-gates`).
+
 ### Agent Permissions
 
 | Permission | Description                       |
