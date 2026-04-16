@@ -10,12 +10,13 @@ import pinoPretty from "pino-pretty";
 
 import {
   AASOrchestrator,
+  createPlanDrivenQualityGateHooks,
   loadAASConfig,
   parsePlanMarkdown,
   PLAN_LIMITS,
   planToRun,
 } from "../index.js";
-import type { AASConfig, Agent, QualityGateHooks, Task } from "../index.js";
+import type { AASConfig, Agent, Task } from "../index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -55,21 +56,27 @@ export async function runStartAAS(options: StartAASOptions): Promise<number> {
 
   try {
     const envPath = await resolveEnvFilePath(options.envFile);
-    const unsafeEnvBeforeDotenv = process.env.AAS_UNSAFE_GATES === "1";
     const dotenv = await import("dotenv");
     dotenv.config({ path: envPath });
 
     const loadedConfig = await loadAASConfig(envPath);
     const config = buildRuntimeConfig(loadedConfig, normalizeLogLevel(options.logLevel));
-    const unsafeGates = Boolean(options.unsafeGates) || unsafeEnvBeforeDotenv;
-    const hooks = createDefaultQualityGateHooks("start-aas", { unsafeGates });
-    const orchestrator = new AASOrchestrator(config, {
+    const unsafeGates = Boolean(options.unsafeGates);
+    const orchestratorRef: { current: AASOrchestrator | null } = { current: null };
+    const hooks = createPlanDrivenQualityGateHooks({
+      planFilePath: options.planFile,
+      unsafeGates,
+      source: "start-aas",
+      getValidatedPlanFilePath: () => orchestratorRef.current!.getPlanFilePath(),
+    });
+    const orchestrator = (orchestratorRef.current = new AASOrchestrator(config, {
       hooks: { qualityGates: hooks },
       planFilePath: options.planFile,
-    });
+    }));
 
     const runControl = await normalizeRunControl(options);
-    const planTasks = await loadExecutablePlanTasks(options.planFile, {
+    const planFilePath = orchestrator.getPlanFilePath();
+    const planTasks = await loadExecutablePlanTasks(planFilePath, {
       ...(typeof runControl.taskTimeoutMs === "number"
         ? { defaultTimeoutMs: runControl.taskTimeoutMs }
         : {}),
@@ -217,10 +224,7 @@ export function createStartAASProgram(): Command {
     .option("--run-id <id>", "Run id override")
     .option("--run-dir <path>", "Run directory (must be within repo)")
     .option("--resume <checkpointPath|runId>", "Resume from checkpoint")
-    .option(
-      "--unsafe-gates",
-      "Pass all quality gates (UNSAFE; equivalent to pre-set AAS_UNSAFE_GATES=1)",
-    )
+    .option("--unsafe-gates", "Pass all quality gates (UNSAFE)")
     .option("--run-timeout-ms <n>", "Global run timeout in ms", (value) => parseInt(value, 10))
     .option("--task-timeout-ms <n>", "Default per-task timeout in ms", (value) =>
       parseInt(value, 10),
@@ -331,29 +335,6 @@ function createAgent(
       webfetch: false,
       task: {},
     },
-  };
-}
-
-function createDefaultQualityGateHooks(
-  source: string,
-  options: { unsafeGates: boolean },
-): QualityGateHooks {
-  if (options.unsafeGates) {
-    return {
-      sanity: () => ({ stage: "sanity", decision: "pass", metadata: { source } }),
-      reviewer: () => ({ stage: "reviewer", decision: "pass", metadata: { source } }),
-      tester: () => ({ stage: "tester", decision: "pass", metadata: { source } }),
-      security: () => ({ stage: "security", decision: "pass", metadata: { source } }),
-    };
-  }
-
-  const reason =
-    "Default quality gates are fail-closed. Provide real hooks or re-run with --unsafe-gates (or set AAS_UNSAFE_GATES=1) to bypass.";
-  return {
-    sanity: () => ({ stage: "sanity", decision: "fail", reason, metadata: { source } }),
-    reviewer: () => ({ stage: "reviewer", decision: "fail", reason, metadata: { source } }),
-    tester: () => ({ stage: "tester", decision: "fail", reason, metadata: { source } }),
-    security: () => ({ stage: "security", decision: "fail", reason, metadata: { source } }),
   };
 }
 

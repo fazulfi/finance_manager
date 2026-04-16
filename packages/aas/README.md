@@ -18,7 +18,7 @@ pnpm add @finance/aas
 - **Parallel Execution**: Real concurrent execution via injected executor (no simulation)
 - **Checkpoint/Resume**: Persist run state (`checkpoint.json`) and resume safely
 - **Cancellation/Timeouts**: Run-level and per-task abort support wired into execution
-- **Fail-Closed Gates**: Quality gate hooks fail-closed by default; bypass is explicit (`--unsafe-gates`)
+- **Plan-Driven Quality Gates**: Fail-closed gates derived from the plan (sanity/reviewer/tester/security); bypass is explicit (`--unsafe-gates`)
 - **Plan Execution**: Parse a markdown plan into a `Task[]` DAG (`dependsOn`) and execute it via `start-aas --plan-file`
 - **Type Safety**: Full TypeScript support with Zod validation
 
@@ -41,7 +41,6 @@ Key environment variables:
 | `AAS_RUN_DIR`               | `./.aas/runs`  | Base directory for run checkpoints (`<runId>/checkpoint.json`) |
 | `AAS_OUTPUT_DIR`            | `./aas-output` | Output directory used by the runtime (if configured)           |
 | `AAS_LOG_DIR`               | `./aas-logs`   | Log output directory (if configured)                           |
-| `AAS_UNSAFE_GATES`          | unset          | If set to `1`/`true`/`yes`, bypasses quality gates (UNSAFE)    |
 
 ## Usage
 
@@ -119,8 +118,18 @@ Common flags:
 Notes:
 
 - `--plan-file` defaults to `.opencode/plans/current-plan.md` (local-only; intentionally not tracked in git).
-- `AAS_UNSAFE_GATES` is only honored if it is already set in the environment before the process starts (it is not enabled via dotenv from `.env.aas`).
 - `--run-dir` and resume/checkpoint paths are confined within the repo and validated using realpath-based checks to prevent symlink/junction escapes.
+
+### Quality gates (plan-driven)
+
+When running `start-aas` against a plan, quality gates are derived from the markdown plan content:
+
+- **Sanity**: plan must include `### Agent Execution Steps` and `## Verification`.
+- **Reviewer**: `coder` and `docs` tasks must depend (transitively) on a `reviewer` task.
+- **Tester**: `docs` tasks must depend (transitively) on a `tester` task.
+- **Security**: if any plan step scope matches risky patterns (`packages/api`, `packages/db`, `schema.prisma`, `auth`, `middleware`), the plan must include a `security-auditor` task; risky `coder` tasks must have a downstream `security-auditor`, and `docs` must depend on a `security-auditor`.
+
+Bypass is CLI-flag-only: `--unsafe-gates`. There is no env/dotenv bypass.
 
 ### Plan File Format (Markdown)
 

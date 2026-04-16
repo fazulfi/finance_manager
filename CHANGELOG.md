@@ -99,6 +99,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [AAS] Add strict plan schema + fail-closed markdown plan parsing and plan-to-run DAG conversion (file: packages/aas/src/plan-parser.ts)
 - [AAS] CLI: accept `start-aas --plan-file <path>` to execute a plan DAG from markdown (file: packages/aas/src/cli/start-aas.ts)
 
+- [AAS] Add plan-driven quality gate hooks that enforce plan structure (sanity/reviewer/tester/security) (file: packages/aas/src/quality-gates.ts)
+- [AAS] Add unit tests covering plan-driven gate behavior (file: packages/aas/src/quality-gates.test.ts)
+
 ### Changed
 
 - [Workflow] Document local-only agent workspace policy: `.opencode/` and `.kilo/` should stay untracked (file: README.md)
@@ -109,7 +112,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [AAS] Replace FIFO TaskQueue with priority + aging scheduling (no simulated execution) (file: packages/aas/src/task-queue.ts)
 - [AAS] Replace simulated parallel engine with injected executor and fail-fast behavior (file: packages/aas/src/parallel-execution-engine.ts)
 - [AAS] Implement `executeRun` orchestration: DAG scheduling, parallel dispatch, checkpoint/resume, and cancel/timeout propagation (file: packages/aas/src/orchestrator.ts)
-- [AAS] CLI: fail-closed gate hooks by default; add explicit bypass via `--unsafe-gates` / `AAS_UNSAFE_GATES=1` (file: bin/start-aas.ts)
+- [AAS] CLI: enforce plan-driven fail-closed quality gates; bypass only via `--unsafe-gates` (file: bin/start-aas.ts)
+- [AAS] Remove `AAS_UNSAFE_GATES` env-bypass; unsafe mode is CLI-flag-only (file: packages/aas/README.md)
+- [AAS] Read plans via orchestrator-validated path (`getPlanFilePath`) before parsing/execution (file: bin/start-aas.ts)
 - [AAS] CLI: add run controls (`--concurrency`, `--run-id`, `--run-dir`, `--resume`, `--run-timeout-ms`, `--task-timeout-ms`) (file: bin/start-aas.ts)
 - [AAS] CLI: add agent runner timeout/cancel test utilities (`--timeout-ms`, `--cancel-after-ms`) (file: bin/run-agent.ts)
 - [AAS] Add `AAS_RUN_DIR` env var for checkpoint base directory defaults (file: packages/aas/.env.aas)
@@ -121,6 +126,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [Security] Enforce repo-root + run-dir boundary checks for checkpoint persistence, including symlink-safe realpath validation and size caps (file: packages/aas/src/run-store.ts)
 
 - [Security] Replace lexical repo-root checks with realpath-based confinement for RunStore resume/checkpoint paths (file: packages/aas/src/run-store.ts)
+
+- [Security] Tighten AAS quality gate bypass to flag-only to avoid ambient env-based bypass (file: bin/start-aas.ts)
 
 - [Phase 1] AI-Assisted Agent System (AAS) package infrastructure
   - Created new `packages/aas` package with TypeScript interfaces, CLI entry points, and environment config

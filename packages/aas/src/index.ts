@@ -64,3 +64,8 @@ export { loadAASConfig } from "./types.js";
 export { parsePlanMarkdown } from "./plan-parser.js";
 export { planToRun } from "./plan-to-run.js";
 export { schemas, PLAN_LIMITS } from "./plan-schema.js";
+
+export {
+  createPlanDrivenQualityGateHooks,
+  type PlanDrivenQualityGateHooksOptions,
+} from "./quality-gates.js";
